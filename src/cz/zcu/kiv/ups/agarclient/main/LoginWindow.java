@@ -52,6 +52,7 @@ public class LoginWindow extends JFrame implements NetworkStateReceiver
         // set size
         setPreferredSize(new Dimension(500, 200));
         setSize(getPreferredSize());
+        setTitle("KIV/UPS: Agar.io - Login");
 
         // choose layout
         setLayout(new GridBagLayout());
@@ -184,6 +185,7 @@ public class LoginWindow extends JFrame implements NetworkStateReceiver
 
         // for now, we will exit when closing this frame
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setLocationRelativeTo(null);
     }
 
     /**
@@ -194,6 +196,19 @@ public class LoginWindow extends JFrame implements NetworkStateReceiver
     {
         loginButton.setEnabled(state);
         registerButton.setEnabled(state);
+    }
+
+    /**
+     * Performs transition to lobby
+     */
+    private void goToLobby()
+    {
+        LobbyWindow lw = new LobbyWindow();
+        lw.initComponents();
+        Networking.getInstance().registerStateReceiver(lw);
+        setVisible(false);
+        lw.setVisible(true);
+        lw.initRoomList();
     }
 
     @Override
@@ -207,6 +222,7 @@ public class LoginWindow extends JFrame implements NetworkStateReceiver
             {
                 case 0: // OK
                     setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
+                    goToLobby();
                     return;
                 case 1: // invalid name
                     resultText.setText("Neexistující uživatel!");
@@ -229,6 +245,7 @@ public class LoginWindow extends JFrame implements NetworkStateReceiver
             {
                 case 0: // OK
                     setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
+                    goToLobby();
                     break;
                 case 1: // invalid name
                     resultText.setText("Neexistující uživatel!");

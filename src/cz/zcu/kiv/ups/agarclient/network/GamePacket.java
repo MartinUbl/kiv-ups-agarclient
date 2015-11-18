@@ -135,6 +135,34 @@ public class GamePacket
     }
 
     /**
+     * Writes short value to packet
+     * @param val value to be written
+     */
+    public void putShort(short val)
+    {
+        try {
+            writeBufferGate.writeShort(val);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        size += 2;
+    }
+
+    /**
+     * Writes byte value to packet
+     * @param val value to be written
+     */
+    public void putByte(int val)
+    {
+        try {
+            writeBufferGate.write(val);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        size += 1;
+    }
+
+    /**
      * Retrieves string from packet
      * @return string read
      */
