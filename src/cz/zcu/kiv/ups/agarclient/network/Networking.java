@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
+import java.nio.ByteBuffer;
 import java.util.LinkedList;
 import java.util.Queue;
 
@@ -181,22 +182,38 @@ public class Networking extends Thread
      */
     private GamePacket _readPacket()
     {
-        byte[] data;
+        byte[] header, data;
         try
         {
-            // get available byte count
-            int bytecount = istream.available();
-            // prepare memory
-            data = new byte[bytecount];
-            // read everything from socket
-            istream.read(data, 0, bytecount);
+            // we need to have at least 4 bytes available (whole header)
+            while (istream.available() < 4)
+                ;
+
+            // allocate space for header
+            header = new byte[4];
+            // read header
+            istream.read(header, 0, 4);
+
+            // fix endianity
+            ByteBuffer bb = ByteBuffer.allocate(header.length);
+            bb.put(header);
+            bb.rewind();
+
+            // read header contents
+            short opcode = bb.getShort();
+            short size = bb.getShort();
+
+            // read data (blocking call)
+            data = new byte[size];
+            istream.read(data);
             // build packet and return it
-            return new GamePacket(data);
+            return new GamePacket(opcode, size, data);
         }
         catch (IOException e)
         {
             System.err.println("Read error");
         }
+
         return null;
     }
 

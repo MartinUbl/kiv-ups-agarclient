@@ -150,6 +150,19 @@ public class LobbyWindow extends JFrame implements NetworkStateReceiver, ActionL
         initRoomList(GAMETYPE_FREEFORALL);
     }
 
+    /**
+     * Switches application state to gaming
+     */
+    private void switchToGame()
+    {
+        GameWindow gw = new GameWindow();
+        gw.initComponents();
+        Networking.getInstance().registerStateReceiver(gw);
+        setVisible(false);
+        gw.setVisible(true);
+        gw.initGame();
+    }
+
     @Override
     public void OnPacketReceived(GamePacket packet)
     {
@@ -182,7 +195,7 @@ public class LobbyWindow extends JFrame implements NetworkStateReceiver, ActionL
             switch (statusCode)
             {
                 case 0: // all OK
-                    // go to game
+                    switchToGame();
                     break;
                 case 1: // failed due to capacity
                     JOptionPane.showMessageDialog(null, "Tato místnost je plná!", "Nelze se připojit", JOptionPane.ERROR_MESSAGE);

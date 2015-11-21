@@ -221,6 +221,11 @@ public class LoginWindow extends JFrame implements NetworkStateReceiver
             switch (rescode)
             {
                 case 0: // OK
+
+                    // retrieve player ID and store it
+                    int plid = packet.getInt();
+                    Main.setPlayerId(plid);
+
                     setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
                     goToLobby();
                     return;
@@ -244,6 +249,10 @@ public class LoginWindow extends JFrame implements NetworkStateReceiver
             switch (rescode)
             {
                 case 0: // OK
+
+                    int plid = packet.getInt();
+                    Main.setPlayerId(plid);
+
                     setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
                     goToLobby();
                     break;

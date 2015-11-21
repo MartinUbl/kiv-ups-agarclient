@@ -10,12 +10,12 @@ import java.nio.ByteBuffer;
  *
  * @author martin.ubl
  */
-public class GamePacket
+public strictfp class GamePacket
 {
     /** packet opcode */
-    private short opcode;
+    private short opcode = 0;
     /** packet contents size */
-    private short size;
+    private short size = 0;
 
     /** write buffer for packet building */
     private ByteArrayOutputStream writeBuffer;
@@ -26,22 +26,17 @@ public class GamePacket
     private ByteBuffer readBuffer;
 
     /**
-     * Constructor for packets constructed using "receive packet from network" method
-     * @param data raw data received from line
+     * Constructor for immediate parsed data
+     * @param opcode opcode
+     * @param size size of contents (data)
+     * @param data contents
      */
-    public GamePacket(byte[] data)
+    public GamePacket(short opcode, short size, byte[] data)
     {
-        // parse everything needed
-        ByteBuffer bb = ByteBuffer.allocate(data.length);
-        bb.put(data);
-        bb.rewind();
+        this.opcode = opcode;
+        this.size = size;
 
-        // store opcode and size
-        opcode = bb.getShort();
-        size = bb.getShort();
-
-        // create read buffer and transfer everything
-        readBuffer = ByteBuffer.allocate(data.length - 4).put(bb.array(), 4, data.length - 4);
+        readBuffer = ByteBuffer.allocate(data.length).put(data);
         readBuffer.rewind();
     }
 
@@ -74,7 +69,8 @@ public class GamePacket
         ByteBuffer obf = ByteBuffer.allocate(4 + size);
         obf.putShort(opcode);
         obf.putShort(size);
-        obf.put(writeBuffer.toByteArray());
+        if (size > 0)
+            obf.put(writeBuffer.toByteArray());
         return obf.array();
     }
 

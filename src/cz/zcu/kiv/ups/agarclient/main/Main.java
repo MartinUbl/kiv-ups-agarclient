@@ -11,6 +11,9 @@ public class Main
     /** game version expected */
     public static final int GAME_VERSION = 1;
 
+    /** Player unique identifier */
+    private static int playerId = 0;
+
     /**
      * Main application method
      * @param args CLI args
@@ -23,5 +26,23 @@ public class Main
         lw.setVisible(true);
         // register login window for receiving state changes
         Networking.getInstance().registerStateReceiver(lw);
+    }
+
+    /**
+     * Retrieves player ID
+     * @return player ID
+     */
+    public static int getPlayerId()
+    {
+        return playerId;
+    }
+
+    /**
+     * Sets player id
+     * @param id player id
+     */
+    public static void setPlayerId(int id)
+    {
+        playerId = id;
     }
 }
