@@ -41,7 +41,9 @@ public enum Opcodes
     CP_STATS(0x1F),
     SP_STATS_RESPONSE(0x20),
     CP_CHAT_MSG(0x21),
-    SP_CHAT_MSG(0x22);
+    SP_CHAT_MSG(0x22),
+    SP_DESTROY_OBJECT(0x23),
+    SP_UPDATE_WORLD(0x24);
 
     /** opcode value */
     private int opcode;

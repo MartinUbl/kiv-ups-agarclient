@@ -159,6 +159,20 @@ public strictfp class GamePacket
     }
 
     /**
+     * Writes float value to packet
+     * @param val value to be written
+     */
+    public void putFloat(float val)
+    {
+        try {
+            writeBufferGate.writeFloat(val);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        size += 4;
+    }
+
+    /**
      * Retrieves string from packet
      * @return string read
      */

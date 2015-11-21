@@ -69,6 +69,21 @@ public class GameStorage
     }
 
     /**
+     * Finds player object using its ID
+     * @param id player ID
+     * @return player object
+     */
+    public PlayerObject findPlayer(int id)
+    {
+        for (PlayerObject pl : playerObjects)
+        {
+            if (pl.id == id)
+                return pl;
+        }
+        return null;
+    }
+
+    /**
      * Sets local player object
      * @param pl new local player object
      */
