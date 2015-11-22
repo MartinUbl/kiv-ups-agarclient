@@ -23,6 +23,9 @@ public class GameWindow extends JFrame implements NetworkStateReceiver
     /** Game canvas */
     private GameCanvas canvas;
 
+    /** Flag for game init */
+    private boolean gameInitialized = false;
+
     /**
      * Initializes layout and default stuff
      */
@@ -95,40 +98,48 @@ public class GameWindow extends JFrame implements NetworkStateReceiver
             // retrieve count of players present in updatepacket
             int plcount = packet.getInt();
 
-            // resolve all players
-            for (int i = 0; i < plcount; i++)
+            synchronized (Networking.getInstance())
             {
-                id = packet.getInt();
-                name = packet.getString();
-                size = packet.getInt();
-                x = packet.getFloat();
-                y = packet.getFloat();
-                param = packet.getInt(); // color
-                moving = (packet.getByte() == 1);
-                angle = packet.getFloat();
+                // resolve all players
+                for (int i = 0; i < plcount; i++)
+                {
+                    id = packet.getInt();
+                    name = packet.getString();
+                    size = packet.getInt();
+                    x = packet.getFloat();
+                    y = packet.getFloat();
+                    param = packet.getInt(); // color
+                    moving = (packet.getByte() == 1);
+                    angle = packet.getFloat();
 
-                // create player
-                if (id != Main.getPlayerId())
-                    GameStorage.getInstance().addPlayerObject(new PlayerObject(id, x, y, (byte) 0, param, size, name, moving, angle));
+                    // create player
+                    if (id != Main.getPlayerId())
+                        GameStorage.getInstance().addPlayerObject(new PlayerObject(id, x, y, (byte) 0, param, size, name, moving, angle));
+                }
             }
 
             // retrieve object count present in updatepacket
             int objcount = packet.getInt();
 
-            for (int i = 0; i < objcount; i++)
+            synchronized (Networking.getInstance())
             {
-                id = packet.getInt();
-                x = packet.getFloat();
-                y = packet.getFloat();
-                type = packet.getByte();
-                param = packet.getInt();
+                for (int i = 0; i < objcount; i++)
+                {
+                    id = packet.getInt();
+                    x = packet.getFloat();
+                    y = packet.getFloat();
+                    type = packet.getByte();
+                    param = packet.getInt();
 
-                // create object
-                GameStorage.getInstance().addWorldObject(new WorldObject(id, x, y, type, param));
+                    //System.out.println("Adding "+id+" "+x+" "+y+", "+type+" "+param);
+
+                    // create object
+                    GameStorage.getInstance().addWorldObject(new WorldObject(id, x, y, type, param));
+                }
             }
 
             // init canvas to be drawn (again just when new world is obtained)
-            if (packet.getOpcode() == Opcodes.SP_NEW_WORLD.val())
+            if (packet.getOpcode() == Opcodes.SP_NEW_WORLD.val() && !gameInitialized)
             {
                 canvas = new GameCanvas();
                 canvas.setSize(getPreferredSize());
@@ -136,6 +147,9 @@ public class GameWindow extends JFrame implements NetworkStateReceiver
 
                 canvas.initCanvas(this);
             }
+            canvas.setWeAreDead(false);
+
+            gameInitialized = true;
         }
         // move heartbeat packet
         else if (packet.getOpcode() == Opcodes.SP_MOVE_HEARTBEAT.val())
@@ -145,12 +159,15 @@ public class GameWindow extends JFrame implements NetworkStateReceiver
             float x = packet.getFloat();
             float y = packet.getFloat();
 
-            // find player and set position
-            PlayerObject plr = GameStorage.getInstance().findPlayer(id);
-            if (plr != null && id != Main.getPlayerId())
+            synchronized (Networking.getInstance())
             {
-                plr.positionX = x;
-                plr.positionY = y;
+                // find player and set position
+                PlayerObject plr = GameStorage.getInstance().findPlayer(id);
+                if (plr != null && id != Main.getPlayerId())
+                {
+                    plr.positionX = x;
+                    plr.positionY = y;
+                }
             }
         }
         // move direction packet
@@ -160,11 +177,14 @@ public class GameWindow extends JFrame implements NetworkStateReceiver
             int id = packet.getInt();
             float angle = packet.getFloat();
 
-            // find player and set move angle
-            PlayerObject plr = GameStorage.getInstance().findPlayer(id);
-            if (plr != null && id != Main.getPlayerId())
+            synchronized (Networking.getInstance())
             {
-                plr.moveAngle = angle;
+                // find player and set move angle
+                PlayerObject plr = GameStorage.getInstance().findPlayer(id);
+                if (plr != null && id != Main.getPlayerId())
+                {
+                    plr.moveAngle = angle;
+                }
             }
         }
         // move start packet
@@ -175,11 +195,14 @@ public class GameWindow extends JFrame implements NetworkStateReceiver
             float angle = packet.getFloat();
 
             // find player, set move angle and moving flag
-            PlayerObject plr = GameStorage.getInstance().findPlayer(id);
-            if (plr != null && id != Main.getPlayerId())
+            synchronized (Networking.getInstance())
             {
-                plr.moveAngle = angle;
-                plr.moving = true;
+                PlayerObject plr = GameStorage.getInstance().findPlayer(id);
+                if (plr != null && id != Main.getPlayerId())
+                {
+                    plr.moveAngle = angle;
+                    plr.moving = true;
+                }
             }
         }
         // move stop packet
@@ -190,13 +213,16 @@ public class GameWindow extends JFrame implements NetworkStateReceiver
             float x = packet.getFloat();
             float y = packet.getFloat();
 
-            // find player, set position and unset moving flag
-            PlayerObject plr = GameStorage.getInstance().findPlayer(id);
-            if (plr != null && id != Main.getPlayerId())
+            synchronized (Networking.getInstance())
             {
-                plr.positionX = x;
-                plr.positionY = y;
-                plr.moving = false;
+                // find player, set position and unset moving flag
+                PlayerObject plr = GameStorage.getInstance().findPlayer(id);
+                if (plr != null && id != Main.getPlayerId())
+                {
+                    plr.positionX = x;
+                    plr.positionY = y;
+                    plr.moving = false;
+                }
             }
         }
         // new player packet
@@ -220,8 +246,85 @@ public class GameWindow extends JFrame implements NetworkStateReceiver
             // create player, if it's not us
             if (id != Main.getPlayerId())
             {
-                System.out.println("Creating player "+name+" at "+x+" ; "+y);
-                GameStorage.getInstance().addPlayerObject(new PlayerObject(id, x, y, (byte) 0, param, size, name, moving, angle));
+                synchronized (Networking.getInstance())
+                {
+                    System.out.println("Creating player "+name+" at "+x+" ; "+y);
+                    GameStorage.getInstance().addPlayerObject(new PlayerObject(id, x, y, (byte) 0, param, size, name, moving, angle));
+                }
+            }
+        }
+        // object eaten packet
+        else if (packet.getOpcode() == Opcodes.SP_OBJECT_EATEN.val())
+        {
+            int objectId = packet.getInt();
+            int eaterId = packet.getInt();
+            int sizeChange = packet.getInt();
+
+            /*WorldObject obj = GameStorage.getInstance().findObject(objectId);
+            if (obj != null)
+            {
+                GameStorage.getInstance().removeWorldObject(obj);
+            }*/
+
+            synchronized (Networking.getInstance())
+            {
+                if (eaterId == Main.getPlayerId())
+                {
+                    GameStorage.getInstance().getLocalPlayer().size += sizeChange;
+                }
+                else
+                {
+                    PlayerObject plr = GameStorage.getInstance().findPlayer(eaterId);
+                    if (plr != null)
+                        plr.size += sizeChange;
+                }
+            }
+        }
+        // player eaten packet
+        else if (packet.getOpcode() == Opcodes.SP_PLAYER_EATEN.val())
+        {
+            int subjectId = packet.getInt();
+            int eaterId = packet.getInt();
+            int sizeChange = packet.getInt();
+
+            if (subjectId == Main.getPlayerId())
+            {
+                // we had been eaten :-(
+                canvas.setWeAreDead(true);
+            }
+            else
+            {
+                synchronized (Networking.getInstance())
+                {
+                    PlayerObject plr = GameStorage.getInstance().findPlayer(subjectId);
+                    if (plr != null)
+                        GameStorage.getInstance().removePlayerObject(plr);
+
+                    if (eaterId == Main.getPlayerId())
+                        GameStorage.getInstance().getLocalPlayer().size += sizeChange;
+                    else
+                    {
+                        plr = GameStorage.getInstance().findPlayer(subjectId);
+                        if (plr != null)
+                            plr.size += sizeChange;
+                    }
+                }
+            }
+        }
+        // object destroy packet
+        else if (packet.getOpcode() == Opcodes.SP_DESTROY_OBJECT.val())
+        {
+            int objectId = packet.getInt();
+            byte reason = packet.getByte();
+
+            synchronized (Networking.getInstance())
+            {
+                WorldObject obj = GameStorage.getInstance().findObject(objectId);
+                if (obj != null)
+                {
+                    GameStorage.getInstance().removeWorldObject(obj);
+                    // TODO: animation?
+                }
             }
         }
     }

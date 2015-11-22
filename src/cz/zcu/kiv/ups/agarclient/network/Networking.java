@@ -120,6 +120,10 @@ public class Networking extends Thread
             ostream = s.getOutputStream();
 
             System.out.println("Connected to "+s.getInetAddress()+":"+s.getPort());
+
+            // Set receive buffer size to maximum (unsigned) short value
+            // this will allow us to wait for whole packets instead of reading by fragments
+            s.setReceiveBufferSize(65535);
         }
         catch (Exception e)
         {
@@ -182,12 +186,14 @@ public class Networking extends Thread
      */
     private GamePacket _readPacket()
     {
+        int opcode = 0, size = 0;
         byte[] header, data;
         try
         {
-            // we need to have at least 4 bytes available (whole header)
+            // we need to have at least 4 bytes available (whole header), if not, pass the
+            // CPU time to another thread
             while (istream.available() < 4)
-                ;
+                Thread.yield();
 
             // allocate space for header
             header = new byte[4];
@@ -200,14 +206,21 @@ public class Networking extends Thread
             bb.rewind();
 
             // read header contents
-            short opcode = bb.getShort();
-            short size = bb.getShort();
+            opcode = bb.getShort();
+            bb.rewind();
+            size = bb.getInt() & 0xFFFF; // there is always a way, how to get unsigned short range
 
             // read data (blocking call)
             data = new byte[size];
-            istream.read(data);
+
+            // wait for needed size to be available - this is possible due to readbuffer having size of
+            // maximum unsigned short value
+            while (istream.available() < size)
+                Thread.yield(); // pass CPU time to another thread
+
+            istream.read(data, 0, size);
             // build packet and return it
-            return new GamePacket(opcode, size, data);
+            return new GamePacket((short)opcode, (short)size, data);
         }
         catch (IOException e)
         {

@@ -35,4 +35,13 @@ public class WorldObject
         this.param = param;
     }
 
+    @Override
+    public boolean equals(Object obj)
+    {
+        if (obj instanceof WorldObject)
+            return ((WorldObject) obj).id == this.id;
+        else
+            return super.equals(obj);
+    }
+
 }

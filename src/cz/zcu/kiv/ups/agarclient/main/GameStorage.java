@@ -38,7 +38,17 @@ public class GameStorage
      */
     public void addWorldObject(WorldObject obj)
     {
-        worldObjects.add(obj);
+        if (!worldObjects.contains(obj))
+            worldObjects.add(obj);
+    }
+
+    /**
+     * Removes world object from world
+     * @param obj object to be removed
+     */
+    public void removeWorldObject(WorldObject obj)
+    {
+        worldObjects.remove(obj);
     }
 
     /**
@@ -56,7 +66,17 @@ public class GameStorage
      */
     public void addPlayerObject(PlayerObject obj)
     {
-        playerObjects.add(obj);
+        if (!playerObjects.contains(obj))
+            playerObjects.add(obj);
+    }
+
+    /**
+     * Removes player from world
+     * @param obj player to be removed
+     */
+    public void removePlayerObject(PlayerObject obj)
+    {
+        playerObjects.remove(obj);
     }
 
     /**
@@ -79,6 +99,21 @@ public class GameStorage
         {
             if (pl.id == id)
                 return pl;
+        }
+        return null;
+    }
+
+    /**
+     * Finds world object using its ID
+     * @param id object ID
+     * @return world object
+     */
+    public WorldObject findObject(int id)
+    {
+        for (WorldObject ob : worldObjects)
+        {
+            if (ob.id == id)
+                return ob;
         }
         return null;
     }

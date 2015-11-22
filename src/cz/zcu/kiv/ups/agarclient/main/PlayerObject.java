@@ -38,4 +38,13 @@ public class PlayerObject extends WorldObject
         this.moveAngle = moveAngle;
     }
 
+    @Override
+    public boolean equals(Object obj)
+    {
+        if (obj instanceof PlayerObject)
+            return ((PlayerObject) obj).id == this.id;
+        else
+            return super.equals(obj);
+    }
+
 }

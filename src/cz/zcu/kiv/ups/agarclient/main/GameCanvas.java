@@ -3,6 +3,7 @@ package cz.zcu.kiv.ups.agarclient.main;
 import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.RenderingHints;
 import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -10,7 +11,6 @@ import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.util.List;
 
-import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.Timer;
 
@@ -39,20 +39,31 @@ public strictfp class GameCanvas extends JPanel implements ActionListener
     private boolean movementAngleChanged = false;
 
     /** Coefficient for server-side position values to convert them to drawable units */
-    private static final float DRAW_UNIT_COEF = 15.0f; // 15.0f
+    private static final float DRAW_UNIT_COEF = 30.0f; // 30.0f
     /** Base movement coefficient */
-    private static final float MOVE_MS_COEF = 0.0075f; // 0.0075f
+    private static final float MOVE_MS_COEF = 0.0065f; // 0.0065f
     /** Time delay between two movement updates */
     private static final long HEARTBEAT_TIME_DELAY = 500;
+    /** Player size coefficient */
+    private static final float PLAYER_SIZE_COEF = 0.3f;
 
     /** Movement flags - up, left, down, right */
     private static boolean moveDirFlags[] = { false, false, false, false };
+
+    /** Flag for "we have been eaten" */
+    private boolean weAreDead = false;
+
+    /** parent frame */
+    private GameWindow parentFrame = null;
 
     /**
      * Updates local player movement angle
      */
     private void updateMoveAngle()
     {
+        if (weAreDead)
+            return;
+
         GameStorage gsInst = GameStorage.getInstance();
         LocalPlayer pl = gsInst.getLocalPlayer();
 
@@ -104,12 +115,33 @@ public strictfp class GameCanvas extends JPanel implements ActionListener
     }
 
     /**
+     * Sets dead flag
+     * @param state dead state
+     */
+    public void setWeAreDead(boolean state)
+    {
+        weAreDead = state;
+    }
+
+    /**
+     * Retrieves dead state
+     * @return dead state
+     */
+    public boolean getWeAreDead()
+    {
+        return weAreDead;
+    }
+
+    /**
      * Sends move state to server
      * @param moving is player moving?
      * @param pl player we are talking about
      */
     private void sendMoveState(boolean moving, LocalPlayer pl)
     {
+        if (weAreDead)
+            return;
+
         GamePacket gp;
         if (moving)
             gp = new GamePacket(Opcodes.CP_MOVE_START.val());
@@ -129,6 +161,9 @@ public strictfp class GameCanvas extends JPanel implements ActionListener
      */
     private void sendMoveHeartbeat(LocalPlayer pl)
     {
+        if (weAreDead)
+            return;
+
         GamePacket gp = new GamePacket(Opcodes.CP_MOVE_HEARTBEAT.val());
 
         gp.putFloat(pl.positionX);
@@ -143,6 +178,9 @@ public strictfp class GameCanvas extends JPanel implements ActionListener
      */
     private void sendMoveDirection(LocalPlayer pl)
     {
+        if (weAreDead)
+            return;
+
         GamePacket gp = new GamePacket(Opcodes.CP_MOVE_DIRECTION.val());
 
         gp.putFloat(pl.moveAngle);
@@ -154,19 +192,21 @@ public strictfp class GameCanvas extends JPanel implements ActionListener
      * Initializes game canvas
      * @param fr parent frame
      */
-    public void initCanvas(JFrame fr)
+    public void initCanvas(GameWindow fr)
     {
+        parentFrame = fr;
+
         // create key adapter to be used
         KeyAdapter kap = new KeyAdapter() {
             @Override
             public void keyReleased(KeyEvent e) {
                 if (e.getKeyCode() == KeyEvent.VK_W)
                     moveDirFlags[0] = false;
-                if (e.getKeyCode() == KeyEvent.VK_A)
+                else if (e.getKeyCode() == KeyEvent.VK_A)
                     moveDirFlags[1] = false;
-                if (e.getKeyCode() == KeyEvent.VK_S)
+                else if (e.getKeyCode() == KeyEvent.VK_S)
                     moveDirFlags[2] = false;
-                if (e.getKeyCode() == KeyEvent.VK_D)
+                else if (e.getKeyCode() == KeyEvent.VK_D)
                     moveDirFlags[3] = false;
 
                 updateMoveAngle();
@@ -176,14 +216,21 @@ public strictfp class GameCanvas extends JPanel implements ActionListener
             public void keyPressed(KeyEvent e) {
                 if (e.getKeyCode() == KeyEvent.VK_W)
                     moveDirFlags[0] = true;
-                if (e.getKeyCode() == KeyEvent.VK_A)
+                else if (e.getKeyCode() == KeyEvent.VK_A)
                     moveDirFlags[1] = true;
-                if (e.getKeyCode() == KeyEvent.VK_S)
+                else if (e.getKeyCode() == KeyEvent.VK_S)
                     moveDirFlags[2] = true;
-                if (e.getKeyCode() == KeyEvent.VK_D)
+                else if (e.getKeyCode() == KeyEvent.VK_D)
                     moveDirFlags[3] = true;
 
                 updateMoveAngle();
+
+                // when we are dead, use space to restart the game
+                if (weAreDead && e.getKeyCode() == KeyEvent.VK_SPACE)
+                {
+                    // this will send "new world" request, just as when the game starts
+                    parentFrame.initGame();
+                }
             }
         };
         // adds key listener to frame
@@ -201,7 +248,10 @@ public strictfp class GameCanvas extends JPanel implements ActionListener
         super.paint(g);
 
         // paint our stuff
-        doPaint((Graphics2D)g);
+        synchronized (Networking.getInstance())
+        {
+            doPaint((Graphics2D)g);
+        }
 
         // synchronize buffers
         Toolkit.getDefaultToolkit().sync();
@@ -213,6 +263,26 @@ public strictfp class GameCanvas extends JPanel implements ActionListener
      */
     private void doPaint(Graphics2D g2)
     {
+        // turn antialiasing on
+        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+        // when we are dead, just display, what we can do
+        if (weAreDead)
+        {
+            g2.setColor(Color.GRAY);
+            g2.fillRect(0, 0, getWidth(), getHeight());
+
+            g2.setColor(Color.BLACK);
+            String toDraw = "Game Over :-(";
+            g2.drawString(toDraw, (getWidth() - g2.getFontMetrics().stringWidth(toDraw)) / 2, getHeight() / 2);
+
+            toDraw = "Mezerník - opakovat hru";
+            g2.drawString(toDraw, (getWidth() - g2.getFontMetrics().stringWidth(toDraw)) / 2, getHeight() / 2 + 30);
+            toDraw = "Escape - zpátky do lobby";
+            g2.drawString(toDraw, (getWidth() - g2.getFontMetrics().stringWidth(toDraw)) / 2, getHeight() / 2 + 45);
+            return;
+        }
+
         GameStorage gsInst = GameStorage.getInstance();
 
         // retrieve everything we need to be drawn
@@ -224,9 +294,7 @@ public strictfp class GameCanvas extends JPanel implements ActionListener
         g2.setColor(Color.WHITE);
         g2.fillRect(0, 0, getWidth(), getHeight());
 
-        // paint our player
-        g2.setColor(Color.RED);
-        g2.fillOval((getWidth() - pl.size) / 2, (getHeight() - pl.size) / 2, pl.size, pl.size);
+        int plsize;
 
         // get reference points
         float refX = pl.positionX - (getWidth() / 2) / DRAW_UNIT_COEF;
@@ -246,12 +314,20 @@ public strictfp class GameCanvas extends JPanel implements ActionListener
         }
 
         // draw all players
-        // TODO: real color
-        g2.setColor(Color.RED);
         for (PlayerObject plr : plrs)
         {
-            g2.fillOval((int)((plr.positionX - refX)*DRAW_UNIT_COEF) - plr.size / 2, (int)((plr.positionY - refY)*DRAW_UNIT_COEF) - plr.size / 2, plr.size, plr.size);
+            g2.setColor(new Color(plr.param));
+            plsize = (int)(plr.size * PLAYER_SIZE_COEF);
+            g2.fillOval((int)((plr.positionX - refX)*DRAW_UNIT_COEF) - plsize / 2, (int)((plr.positionY - refY)*DRAW_UNIT_COEF) - plsize / 2, plsize, plsize);
+
+            g2.drawString(plr.name, (int)((plr.positionX - refX)*DRAW_UNIT_COEF) - g2.getFontMetrics().stringWidth(plr.name) / 2, (int)((plr.positionY - refY)*DRAW_UNIT_COEF) - plsize / 2 - 4);
         }
+
+        // paint our player
+        plsize = (int)(pl.size * PLAYER_SIZE_COEF);
+        g2.setColor(new Color(pl.param));
+        g2.fillOval((getWidth() - plsize) / 2, (getHeight() - plsize) / 2, plsize, plsize);
+        g2.drawString(pl.name, (getWidth() - g2.getFontMetrics().stringWidth(pl.name)) / 2, (getHeight() - plsize) / 2 - 4);
     }
 
     /**
@@ -334,8 +410,15 @@ public strictfp class GameCanvas extends JPanel implements ActionListener
     @Override
     public void actionPerformed(ActionEvent arg0)
     {
-        updateMovement();
+        synchronized (Networking.getInstance())
+        {
+            if (!weAreDead)
+                updateMovement();
+        }
+
+        // paint has its own lock
         repaint();
+
         lastUpdateTime = System.currentTimeMillis();
     }
 
