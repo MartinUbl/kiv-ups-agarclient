@@ -1,5 +1,8 @@
 # Eclipse project files
-bin/*
 .settings/*
 .project
 .classpath
+
+# build outputs
+agarclient.jar
+bin/*

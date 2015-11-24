@@ -1,0 +1,28 @@
+<project basedir="." default="build" name="kiv-ups-agarclient">
+
+	<target name="build" depends="clean,build-main,make-jar">
+	</target>
+
+	<target name="clean">
+		<echo message="Performing pre-build cleanup..." />
+		<delete dir="bin" />
+		<delete file="agarclient.jar" />
+	</target>
+	
+	<target name="build-main">
+		<echo message="Building application..." />
+		<mkdir dir="bin"/>
+		<javac srcdir="src" destdir="bin" encoding="utf-8" />
+	</target>
+	
+	<target depends="build-main" name="make-jar">
+		<echo message="Creating executable JAR file..." />
+		<jar destfile="agarclient.jar" includes="META-INF/MANIFEST.MF">
+			<fileset dir="${basedir}/bin" />
+			<manifest>
+				<attribute name="Main-Class" value="cz.zcu.kiv.ups.agarclient.main.Main"/>
+			</manifest>
+		</jar>
+	</target>
+
+</project>

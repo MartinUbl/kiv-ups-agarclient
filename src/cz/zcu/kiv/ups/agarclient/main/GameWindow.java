@@ -271,6 +271,7 @@ public class GameWindow extends JFrame implements NetworkStateReceiver
                 if (eaterId == Main.getPlayerId())
                 {
                     GameStorage.getInstance().getLocalPlayer().size += sizeChange;
+                    System.out.println("Changing my size to "+GameStorage.getInstance().getLocalPlayer().size);
                 }
                 else
                 {
