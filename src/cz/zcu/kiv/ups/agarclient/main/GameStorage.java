@@ -186,7 +186,9 @@ public class GameStorage
         List<WorldObject> wobl = gridMap.get(indexX).get(indexY);
         // remove all world objects and players from that cell
         worldObjects.removeAll(wobl);
-        playerObjects.removeAll(wobl);
+
+        // player objects will be removed by packet from server
+        //playerObjects.removeAll(...);
 
         // also clear contents of cell in cell map
         wobl.clear();
@@ -212,10 +214,10 @@ public class GameStorage
         obj.positionY = ny;
 
         // if player moved between cells, relocate
-        if (cellX != cellXNew || cellY != cellYNew)
+        if (cellX != cellXNew || cellY != cellYNew || !gridMap.get(cellX).get(cellY).contains(obj))
         {
             gridMap.get(cellX).get(cellY).remove(obj);
-            gridMap.get(cellXNew).get(cellYNew).remove(obj);
+            gridMap.get(cellXNew).get(cellYNew).add(obj);
 
             // if it was our local player, delete old objects in out-of-range cells
             if (obj == localPlayer)
@@ -340,7 +342,7 @@ public class GameStorage
 
                     // if the target is player, count his size
                     if (ob instanceof PlayerObject)
-                        currDist -= ((float)((PlayerObject) ob).size)*GameCanvas.PLAYER_SIZE_COEF;
+                        currDist = getExactDistance(ob, localPlayer) - ((float)((PlayerObject) ob).size)*GameCanvas.PLAYER_SIZE_COEF / GameCanvas.DRAW_UNIT_COEF;
 
                     // if we found closer object, use it
                     if (currDist < closestManhattan)

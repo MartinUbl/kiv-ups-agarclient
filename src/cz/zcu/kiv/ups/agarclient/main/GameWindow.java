@@ -124,6 +124,7 @@ public class GameWindow extends JFrame implements NetworkStateReceiver
                         PlayerObject plr = new PlayerObject(id, x, y, (byte) 0, param, size, name, moving, angle);
                         gsInst.addPlayerObject(plr);
                         gsInst.setPlayerSize(plr, size);
+                        gsInst.movePlayer(plr, x, y);
                     }
                 }
             }
@@ -140,8 +141,6 @@ public class GameWindow extends JFrame implements NetworkStateReceiver
                     y = packet.getFloat();
                     type = packet.getByte();
                     param = packet.getInt();
-
-                    //System.out.println("Adding "+id+" "+x+" "+y+", "+type+" "+param);
 
                     // create object
                     gsInst.addWorldObject(new WorldObject(id, x, y, type, param));
@@ -264,6 +263,7 @@ public class GameWindow extends JFrame implements NetworkStateReceiver
                     PlayerObject plr = new PlayerObject(id, x, y, (byte) 0, param, size, name, moving, angle);
                     gsInst.addPlayerObject(plr);
                     gsInst.setPlayerSize(plr, size);
+                    gsInst.movePlayer(plr, x, y);
                 }
             }
         }
