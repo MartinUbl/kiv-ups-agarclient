@@ -337,12 +337,11 @@ public class GameStorage
                     if (ob == localPlayer || ob.localIntersect)
                         continue;
 
-                    // get manhattan distance as relevant quick metric
-                    currDist = getManhattanDistance(ob, localPlayer);
-
-                    // if the target is player, count his size
+                    // if the target is player, count his size and use exact distance
                     if (ob instanceof PlayerObject)
                         currDist = getExactDistance(ob, localPlayer) - ((float)((PlayerObject) ob).size)*GameCanvas.PLAYER_SIZE_COEF / GameCanvas.DRAW_UNIT_COEF;
+                    else // otherwise use manhattan distance as relevant quick metric
+                        currDist = getManhattanDistance(ob, localPlayer);
 
                     // if we found closer object, use it
                     if (currDist < closestManhattan)

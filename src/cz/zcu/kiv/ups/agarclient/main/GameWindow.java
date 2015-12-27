@@ -267,6 +267,30 @@ public class GameWindow extends JFrame implements NetworkStateReceiver
                 }
             }
         }
+        // new object packet
+        else if (packet.getOpcode() == Opcodes.SP_NEW_OBJECT.val())
+        {
+            // standard object create block
+            int id, param;
+            byte type;
+            float x, y;
+
+            id = packet.getInt();
+            x = packet.getFloat();
+            y = packet.getFloat();
+            type = packet.getByte();
+            param = packet.getInt();
+
+            // create new object
+            synchronized (Networking.getInstance())
+            {
+                WorldObject obj = gsInst.findObject(id);
+                if (obj != null)
+                    gsInst.removeWorldObject(obj);
+
+                gsInst.addWorldObject(new WorldObject(id, x, y, type, param));
+            }
+        }
         // object eaten packet
         else if (packet.getOpcode() == Opcodes.SP_OBJECT_EATEN.val())
         {
