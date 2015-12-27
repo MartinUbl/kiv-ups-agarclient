@@ -13,10 +13,6 @@ public class Main
 
     /** Player unique identifier */
     private static int playerId = 0;
-    /** Map width */
-    private static float mapSizeX = 0.0f;
-    /** Map height */
-    private static float mapSizeY = 0.0f;
 
     /**
      * Main application method
@@ -48,34 +44,5 @@ public class Main
     public static void setPlayerId(int id)
     {
         playerId = id;
-    }
-
-    /**
-     * Sets map size
-     * @param width map width
-     * @param height map height
-     */
-    public static void setMapSize(float width, float height)
-    {
-        mapSizeX = width;
-        mapSizeY = height;
-    }
-
-    /**
-     * Retrieves map width
-     * @return map width
-     */
-    public static float getMapWidth()
-    {
-        return mapSizeX;
-    }
-
-    /**
-     * Retrieves map height
-     * @return map height
-     */
-    public static float getMapHeight()
-    {
-        return mapSizeY;
     }
 }

@@ -17,6 +17,8 @@ public class WorldObject
     protected byte typeId;
     /** Object parameter */
     protected int param;
+    /** Is object colliding with local player? */
+    protected boolean localIntersect;
 
     /**
      * World object constructor
@@ -42,6 +44,24 @@ public class WorldObject
             return ((WorldObject) obj).id == this.id;
         else
             return super.equals(obj);
+    }
+
+    /**
+     * Is object colliding with local player?
+     * @return is colliding?
+     */
+    public boolean isLocalIntersection()
+    {
+        return localIntersect;
+    }
+
+    /**
+     * Sets local intersection state
+     * @param state
+     */
+    public void setLocalIntersection(boolean state)
+    {
+        localIntersect = state;
     }
 
 }

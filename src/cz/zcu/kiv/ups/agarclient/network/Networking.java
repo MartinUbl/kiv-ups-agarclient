@@ -7,6 +7,7 @@ import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.util.LinkedList;
 import java.util.Queue;
+import java.nio.channels.SocketChannel;
 
 import cz.zcu.kiv.ups.agarclient.main.NetworkStateReceiver;
 
@@ -273,6 +274,13 @@ public class Networking extends Thread
 
         if (!isAlive())
             start();
+        else
+        {
+            synchronized (this)
+            {
+                notify();
+            }
+        }
     }
 
     /**
@@ -286,26 +294,36 @@ public class Networking extends Thread
     @Override
     public void run()
     {
-        // at first, attempt to connect to remote host
-        if (!connectToServer())
+        while (!isShuttingDown)
         {
-            // if unsuccessful, send failed state
-            _sendConnectionStateChange(ConnectionState.CONNECTION_FAILED);
-            return;
-        }
-        // otherwise send connected state
-        _sendConnectionStateChange(ConnectionState.CONNECTED);
+            // at first, attempt to connect to remote host
+            if (!connectToServer())
+            {
+                // if unsuccessful, send failed state
+                _sendConnectionStateChange(ConnectionState.CONNECTION_FAILED);
+                try
+                {
+                    synchronized (this)
+                    {
+                        wait();
+                    }
+                } catch (InterruptedException e) { }
+                continue;
+            }
+            // otherwise send connected state
+            _sendConnectionStateChange(ConnectionState.CONNECTED);
 
-        // this loop will be repeated until there's a chance something will need to be sent/received to/from network
-        while (!s.isClosed() && !isShuttingDown)
-        {
-            // while there's some packets to be sent, send them
-            while (!isPacketQueueEmpty())
-                _sendPacket(getPacketToSend());
+            // this loop will be repeated until there's a chance something will need to be sent/received to/from network
+            while (!s.isClosed() && !isShuttingDown)
+            {
+                // while there's some packets to be sent, send them
+                while (!isPacketQueueEmpty())
+                    _sendPacket(getPacketToSend());
 
-            // while there's something waiting on socket, read it and dispatch it
-            while (!isInputStreamEmpty())
-                _readAndDispatchPacket();
+                // while there's something waiting on socket, read it and dispatch it
+                while (!isInputStreamEmpty())
+                    _readAndDispatchPacket();
+            }
         }
 
         // finally, close everything

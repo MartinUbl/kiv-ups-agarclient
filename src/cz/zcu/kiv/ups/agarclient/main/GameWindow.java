@@ -2,7 +2,6 @@ package cz.zcu.kiv.ups.agarclient.main;
 
 import java.awt.BorderLayout;
 import java.awt.Dimension;
-import java.awt.GridLayout;
 
 import javax.swing.JFrame;
 
@@ -60,6 +59,7 @@ public class GameWindow extends JFrame implements NetworkStateReceiver
     @Override
     public void OnPacketReceived(GamePacket packet)
     {
+        GameStorage gsInst = GameStorage.getInstance();
         // TODO: rework this conditional madness
 
         // received packet about new world
@@ -78,7 +78,7 @@ public class GameWindow extends JFrame implements NetworkStateReceiver
 
                 sizeX = packet.getFloat();
                 sizeY = packet.getFloat();
-                Main.setMapSize(sizeX, sizeY);
+                GameStorage.getInstance().setMapSize(sizeX, sizeY);
 
                 // at first, retrieve our details
                 id = packet.getInt();
@@ -92,7 +92,12 @@ public class GameWindow extends JFrame implements NetworkStateReceiver
 
                 // store local player
                 Main.setPlayerId(id);
-                GameStorage.getInstance().setLocalPlayer(new LocalPlayer(id, x, y, (byte) 0, param, size, name, moving, angle));
+                LocalPlayer plr = new LocalPlayer(id, x, y, (byte) 0, param, size, name, moving, angle);
+                gsInst.setLocalPlayer(plr);
+
+                // this will integrate player to grid map
+                gsInst.movePlayer(plr, x, y);
+                gsInst.setPlayerSize(plr, size);
             }
 
             // retrieve count of players present in updatepacket
@@ -114,7 +119,11 @@ public class GameWindow extends JFrame implements NetworkStateReceiver
 
                     // create player
                     if (id != Main.getPlayerId())
-                        GameStorage.getInstance().addPlayerObject(new PlayerObject(id, x, y, (byte) 0, param, size, name, moving, angle));
+                    {
+                        PlayerObject plr = new PlayerObject(id, x, y, (byte) 0, param, size, name, moving, angle);
+                        gsInst.addPlayerObject(plr);
+                        gsInst.setPlayerSize(plr, size);
+                    }
                 }
             }
 
@@ -134,7 +143,7 @@ public class GameWindow extends JFrame implements NetworkStateReceiver
                     //System.out.println("Adding "+id+" "+x+" "+y+", "+type+" "+param);
 
                     // create object
-                    GameStorage.getInstance().addWorldObject(new WorldObject(id, x, y, type, param));
+                    gsInst.addWorldObject(new WorldObject(id, x, y, type, param));
                 }
             }
 
@@ -165,8 +174,7 @@ public class GameWindow extends JFrame implements NetworkStateReceiver
                 PlayerObject plr = GameStorage.getInstance().findPlayer(id);
                 if (plr != null && id != Main.getPlayerId())
                 {
-                    plr.positionX = x;
-                    plr.positionY = y;
+                    GameStorage.getInstance().movePlayer(plr, x, y);
                 }
             }
         }
@@ -219,8 +227,7 @@ public class GameWindow extends JFrame implements NetworkStateReceiver
                 PlayerObject plr = GameStorage.getInstance().findPlayer(id);
                 if (plr != null && id != Main.getPlayerId())
                 {
-                    plr.positionX = x;
-                    plr.positionY = y;
+                    GameStorage.getInstance().movePlayer(plr, x, y);
                     plr.moving = false;
                 }
             }
@@ -249,7 +256,9 @@ public class GameWindow extends JFrame implements NetworkStateReceiver
                 synchronized (Networking.getInstance())
                 {
                     System.out.println("Creating player "+name+" at "+x+" ; "+y);
-                    GameStorage.getInstance().addPlayerObject(new PlayerObject(id, x, y, (byte) 0, param, size, name, moving, angle));
+                    PlayerObject plr = new PlayerObject(id, x, y, (byte) 0, param, size, name, moving, angle);
+                    gsInst.addPlayerObject(plr);
+                    gsInst.setPlayerSize(plr, size);
                 }
             }
         }
@@ -270,8 +279,7 @@ public class GameWindow extends JFrame implements NetworkStateReceiver
             {
                 if (eaterId == Main.getPlayerId())
                 {
-                    GameStorage.getInstance().getLocalPlayer().size += sizeChange;
-                    System.out.println("Changing my size to "+GameStorage.getInstance().getLocalPlayer().size);
+                    gsInst.changePlayerSize(gsInst.getLocalPlayer(), sizeChange);
                 }
                 else
                 {
@@ -302,12 +310,12 @@ public class GameWindow extends JFrame implements NetworkStateReceiver
                         GameStorage.getInstance().removePlayerObject(plr);
 
                     if (eaterId == Main.getPlayerId())
-                        GameStorage.getInstance().getLocalPlayer().size += sizeChange;
+                        gsInst.changePlayerSize(gsInst.getLocalPlayer(), sizeChange);
                     else
                     {
                         plr = GameStorage.getInstance().findPlayer(subjectId);
                         if (plr != null)
-                            plr.size += sizeChange;
+                            gsInst.changePlayerSize(plr, sizeChange);
                     }
                 }
             }

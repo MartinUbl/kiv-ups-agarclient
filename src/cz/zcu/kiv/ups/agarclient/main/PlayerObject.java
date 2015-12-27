@@ -15,6 +15,8 @@ public class PlayerObject extends WorldObject
     protected float moveAngle;
     /** player size */
     protected int size;
+    /** coefficient of movement speed */
+    protected float moveCoef;
 
     /**
      * Constructor of player object
@@ -36,6 +38,7 @@ public class PlayerObject extends WorldObject
         this.name = name;
         this.moving = moving;
         this.moveAngle = moveAngle;
+        this.moveCoef = GameStorage.MOVE_MS_COEF_MAX;
     }
 
     @Override

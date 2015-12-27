@@ -35,17 +35,19 @@ public strictfp class GameCanvas extends JPanel implements ActionListener
     private long lastUpdateTime = 0;
     /** Last update of movement to server */
     private long lastHeartbeatTime = 0;
+    /** Last update of eatable objects */
+    private long lastEatCheckTime = 0;
     /** Flag for changing movement angle */
     private boolean movementAngleChanged = false;
 
     /** Coefficient for server-side position values to convert them to drawable units */
-    private static final float DRAW_UNIT_COEF = 30.0f; // 30.0f
-    /** Base movement coefficient */
-    private static final float MOVE_MS_COEF = 0.0065f; // 0.0065f
+    public static final float DRAW_UNIT_COEF = 30.0f; // 30.0f
     /** Time delay between two movement updates */
     private static final long HEARTBEAT_TIME_DELAY = 500;
+    /** Time delay between two eat checks */
+    private static final long EATBEAT_TIME_DELAY = 10;
     /** Player size coefficient */
-    private static final float PLAYER_SIZE_COEF = 0.3f;
+    public static final float PLAYER_SIZE_COEF = 0.3f;
 
     /** Movement flags - up, left, down, right */
     private static boolean moveDirFlags[] = { false, false, false, false };
@@ -303,6 +305,9 @@ public strictfp class GameCanvas extends JPanel implements ActionListener
         // draw all objects
         for (WorldObject obj : wobjs)
         {
+            if (obj.localIntersect)
+                continue;
+
             if (obj.typeId == 2) // eatable food
                 g2.setColor(Color.GREEN);
             else if (obj.typeId == 3) // bonuses
@@ -347,21 +352,38 @@ public strictfp class GameCanvas extends JPanel implements ActionListener
             float nx, ny;
 
             // determine change using angle, time diff and coefficients
-            nx = (float) (Math.cos(pl.moveAngle)*MOVE_MS_COEF*diff);
-            ny = (float) (Math.sin(pl.moveAngle)*MOVE_MS_COEF*diff);
+            nx = pl.positionX + (float) (Math.cos(pl.moveAngle)*pl.moveCoef*diff);
+            ny = pl.positionY + (float) (Math.sin(pl.moveAngle)*pl.moveCoef*diff);
 
-            pl.positionX += nx;
-            pl.positionY += ny;
+            if (nx < 0)
+                nx = 0;
+            if (ny < 0)
+                ny = 0;
 
-            if (pl.positionX < 0)
-                pl.positionX = 0;
-            if (pl.positionY < 0)
-                pl.positionY = 0;
+            if (nx > gsInst.getMapWidth())
+                nx = gsInst.getMapWidth();
+            if (ny > gsInst.getMapHeight())
+                ny = gsInst.getMapHeight();
 
-            if (pl.positionX > Main.getMapWidth())
-                pl.positionX = Main.getMapWidth();
-            if (pl.positionY > Main.getMapHeight())
-                pl.positionY = Main.getMapHeight();
+            gsInst.movePlayer(pl, nx, ny);
+
+            if (System.currentTimeMillis() - lastEatCheckTime > EATBEAT_TIME_DELAY)
+            {
+                lastEatCheckTime = System.currentTimeMillis();
+
+                WorldObject inters = gsInst.getCurrentIntersectionObject();
+                while (inters != null && !inters.localIntersect)
+                {
+                    GamePacket gp = new GamePacket(Opcodes.CP_EAT_REQUEST.val());
+                    gp.putByte( (inters instanceof PlayerObject) ? 0 : 1);
+                    gp.putInt(inters.id);
+                    Networking.getInstance().sendPacket(gp);
+
+                    inters.localIntersect = true;
+
+                    inters = gsInst.getCurrentIntersectionObject();
+                }
+            }
 
             // update movement angle if needed
             if (movementAngleChanged)
@@ -388,8 +410,8 @@ public strictfp class GameCanvas extends JPanel implements ActionListener
                 float nx, ny;
 
                 // determine change using angle, time diff and coefficients
-                nx = (float) (Math.cos(plr.moveAngle)*MOVE_MS_COEF*diff);
-                ny = (float) (Math.sin(plr.moveAngle)*MOVE_MS_COEF*diff);
+                nx = (float) (Math.cos(plr.moveAngle)*plr.moveCoef*diff);
+                ny = (float) (Math.sin(plr.moveAngle)*plr.moveCoef*diff);
 
                 plr.positionX += nx;
                 plr.positionY += ny;
@@ -399,10 +421,10 @@ public strictfp class GameCanvas extends JPanel implements ActionListener
                 if (plr.positionY < 0)
                     plr.positionY = 0;
 
-                if (plr.positionX > Main.getMapWidth())
-                    plr.positionX = Main.getMapWidth();
-                if (plr.positionY > Main.getMapHeight())
-                    plr.positionY = Main.getMapHeight();
+                if (plr.positionX > gsInst.getMapWidth())
+                    plr.positionX = gsInst.getMapWidth();
+                if (plr.positionY > gsInst.getMapHeight())
+                    plr.positionY = gsInst.getMapHeight();
             }
         }
     }
