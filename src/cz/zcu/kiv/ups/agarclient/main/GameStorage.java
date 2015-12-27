@@ -259,6 +259,18 @@ public class GameStorage
                         activeCells.add(ip);
                 }
             }
+            else
+            {
+                int iX = getCellIndex(obj.positionX);
+                int iY = getCellIndex(obj.positionY);
+
+                // remove out of range players
+                if (!activeCells.contains(new Pair<Integer>(iX, iY)))
+                {
+                    System.out.println("Removing player from "+iX+", "+iY);
+                    removePlayerObject(obj);
+                }
+            }
         }
     }
 
@@ -328,7 +340,7 @@ public class GameStorage
 
                     // if the target is player, count his size
                     if (ob instanceof PlayerObject)
-                        currDist -= ((PlayerObject) ob).size;
+                        currDist -= ((float)((PlayerObject) ob).size)*GameCanvas.PLAYER_SIZE_COEF;
 
                     // if we found closer object, use it
                     if (currDist < closestManhattan)

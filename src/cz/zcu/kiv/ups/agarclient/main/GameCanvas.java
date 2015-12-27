@@ -14,6 +14,7 @@ import java.util.List;
 import javax.swing.JPanel;
 import javax.swing.Timer;
 
+import cz.zcu.kiv.ups.agarclient.enums.ObjectTypeId;
 import cz.zcu.kiv.ups.agarclient.enums.Opcodes;
 import cz.zcu.kiv.ups.agarclient.network.GamePacket;
 import cz.zcu.kiv.ups.agarclient.network.Networking;
@@ -308,11 +309,11 @@ public strictfp class GameCanvas extends JPanel implements ActionListener
             if (obj.localIntersect)
                 continue;
 
-            if (obj.typeId == 2) // eatable food
+            if (obj.typeId == ObjectTypeId.OBJECT_TYPE_IDLEFOOD.val()) // eatable food
                 g2.setColor(Color.GREEN);
-            else if (obj.typeId == 3) // bonuses
+            else if (obj.typeId == ObjectTypeId.OBJECT_TYPE_BONUSFOOD.val()) // bonuses
                 g2.setColor(Color.BLUE);
-            else if (obj.typeId == 4) // traps
+            else if (obj.typeId == ObjectTypeId.OBJECT_TYPE_TRAP.val()) // traps
                 g2.setColor(Color.RED);
 
             g2.fillOval((int)((obj.positionX - refX)*DRAW_UNIT_COEF), (int)((obj.positionY - refY)*DRAW_UNIT_COEF), 5, 5);
@@ -375,7 +376,7 @@ public strictfp class GameCanvas extends JPanel implements ActionListener
                 while (inters != null && !inters.localIntersect)
                 {
                     GamePacket gp = new GamePacket(Opcodes.CP_EAT_REQUEST.val());
-                    gp.putByte( (inters instanceof PlayerObject) ? 0 : 1);
+                    gp.putByte( (inters instanceof PlayerObject) ? ObjectTypeId.PACKET_OBJECT_TYPE_PLAYER.val() : ObjectTypeId.PACKET_OBJECT_TYPE_WORLDOBJECT.val());
                     gp.putInt(inters.id);
                     Networking.getInstance().sendPacket(gp);
 

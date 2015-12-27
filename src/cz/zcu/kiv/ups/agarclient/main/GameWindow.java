@@ -5,6 +5,7 @@ import java.awt.Dimension;
 
 import javax.swing.JFrame;
 
+import cz.zcu.kiv.ups.agarclient.enums.ObjectTypeId;
 import cz.zcu.kiv.ups.agarclient.enums.Opcodes;
 import cz.zcu.kiv.ups.agarclient.network.ConnectionState;
 import cz.zcu.kiv.ups.agarclient.network.GamePacket;
@@ -256,6 +257,10 @@ public class GameWindow extends JFrame implements NetworkStateReceiver
                 synchronized (Networking.getInstance())
                 {
                     System.out.println("Creating player "+name+" at "+x+" ; "+y);
+                    PlayerObject obj = gsInst.findPlayer(id);
+                    if (obj != null)
+                        gsInst.removePlayerObject(obj);
+
                     PlayerObject plr = new PlayerObject(id, x, y, (byte) 0, param, size, name, moving, angle);
                     gsInst.addPlayerObject(plr);
                     gsInst.setPlayerSize(plr, size);
@@ -286,6 +291,8 @@ public class GameWindow extends JFrame implements NetworkStateReceiver
                     PlayerObject plr = GameStorage.getInstance().findPlayer(eaterId);
                     if (plr != null)
                         plr.size += sizeChange;
+                    else
+                        System.out.println("Could not find player "+eaterId);
                 }
             }
         }
@@ -324,15 +331,28 @@ public class GameWindow extends JFrame implements NetworkStateReceiver
         else if (packet.getOpcode() == Opcodes.SP_DESTROY_OBJECT.val())
         {
             int objectId = packet.getInt();
+            byte type = packet.getByte();
             byte reason = packet.getByte();
 
             synchronized (Networking.getInstance())
             {
-                WorldObject obj = GameStorage.getInstance().findObject(objectId);
-                if (obj != null)
+                if (type == ObjectTypeId.PACKET_OBJECT_TYPE_WORLDOBJECT.val())
                 {
-                    GameStorage.getInstance().removeWorldObject(obj);
-                    // TODO: animation?
+                    WorldObject obj = GameStorage.getInstance().findObject(objectId);
+                    if (obj != null)
+                    {
+                        GameStorage.getInstance().removeWorldObject(obj);
+                        // TODO: animation?
+                    }
+                }
+                else if (type == ObjectTypeId.PACKET_OBJECT_TYPE_PLAYER.val())
+                {
+                    PlayerObject obj = GameStorage.getInstance().findPlayer(objectId);
+                    if (obj != null)
+                    {
+                        GameStorage.getInstance().removePlayerObject(obj);
+                        // TODO: animation?
+                    }
                 }
             }
         }
