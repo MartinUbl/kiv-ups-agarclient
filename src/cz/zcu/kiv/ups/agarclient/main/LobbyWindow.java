@@ -178,7 +178,8 @@ public class LobbyWindow extends JFrame implements NetworkStateReceiver, ActionL
                     packet.getInt(),    // ID
                     packet.getByte(),   // game type
                     packet.getByte(),   // player count
-                    packet.getByte()    // capacity
+                    packet.getByte(),   // capacity
+                    packet.getString()  // room name
                 ));
             }
 

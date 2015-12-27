@@ -10,6 +10,8 @@ public class RoomListItem
     private int playerCount;
     /** maximum player count */
     private int playerCapacity;
+    /** room name */
+    private String roomName;
 
     /**
      * Constructor for this container class
@@ -18,12 +20,13 @@ public class RoomListItem
      * @param playerCount count of players at this moment
      * @param playerCapacity player capacity
      */
-    public RoomListItem(int roomId, int roomType, int playerCount, int playerCapacity)
+    public RoomListItem(int roomId, int roomType, int playerCount, int playerCapacity, String name)
     {
         this.roomId = roomId;
         this.roomType = roomType;
         this.playerCount = playerCount;
         this.playerCapacity = playerCapacity;
+        this.roomName = name;
     }
 
     /**
@@ -31,7 +34,7 @@ public class RoomListItem
      */
     public String toString()
     {
-        return "#"+roomId+" ("+playerCount+" / "+playerCapacity+")";
+        return "#"+roomId+": "+roomName+" ("+playerCount+" / "+playerCapacity+")";
     }
 
     /**
