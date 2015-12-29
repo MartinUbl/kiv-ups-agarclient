@@ -468,6 +468,16 @@ public class GameStorage
             pl.moveCoef = -(size - 540)*(MOVE_MS_COEF_MIN / 420) + ((MOVE_MS_COEF_MAX + MOVE_MS_COEF_MIN) / 2.0f);
     }
 
+    /**
+     * Wipes all existence from storage
+     */
+    public synchronized void wipeAll()
+    {
+        worldObjects.clear();
+        playerObjects.clear();
+        gridMap.clear();
+    }
+
 }
 
 

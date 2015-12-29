@@ -10,5 +10,6 @@ public enum ConnectionState
     IDLE,
     CONNECTED,
     DISCONNECTED,
+    DISCONNECTED_RETRY,
     CONNECTION_FAILED
 }

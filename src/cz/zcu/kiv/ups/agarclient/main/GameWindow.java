@@ -4,6 +4,7 @@ import java.awt.BorderLayout;
 import java.awt.Dimension;
 
 import javax.swing.JFrame;
+import javax.swing.JOptionPane;
 
 import cz.zcu.kiv.ups.agarclient.enums.ObjectTypeId;
 import cz.zcu.kiv.ups.agarclient.enums.Opcodes;
@@ -50,15 +51,25 @@ public class GameWindow extends JFrame implements NetworkStateReceiver
 
     /**
      * Inits game - tries to retrieve world from server
+     * @param reinit
      */
-    public void initGame()
+    public void initGame(boolean reinit)
     {
         GamePacket gp = new GamePacket(Opcodes.CP_WORLD_REQUEST.val());
+        gp.putByte(reinit ? 1 : 0);
         Networking.getInstance().sendPacket(gp);
     }
 
+    /**
+     * Inits game - tries to retrieve world from server
+     */
+    public void initGame()
+    {
+        initGame(false);
+    }
+
     @Override
-    public void OnPacketReceived(GamePacket packet)
+    public boolean OnPacketReceived(GamePacket packet)
     {
         GameStorage gsInst = GameStorage.getInstance();
         // TODO: rework this conditional madness
@@ -69,8 +80,10 @@ public class GameWindow extends JFrame implements NetworkStateReceiver
             int id, size, param;
             float x, y, angle;
             byte type;
-            boolean moving;
+            boolean moving, dead, localDead;
             String name;
+
+            localDead = false;
 
             // "our details" retrieval is received only on new world packet
             if (packet.getOpcode() == Opcodes.SP_NEW_WORLD.val())
@@ -79,7 +92,7 @@ public class GameWindow extends JFrame implements NetworkStateReceiver
 
                 sizeX = packet.getFloat();
                 sizeY = packet.getFloat();
-                GameStorage.getInstance().setMapSize(sizeX, sizeY);
+                gsInst.setMapSize(sizeX, sizeY);
 
                 // at first, retrieve our details
                 id = packet.getInt();
@@ -89,6 +102,7 @@ public class GameWindow extends JFrame implements NetworkStateReceiver
                 y = packet.getFloat();
                 param = packet.getInt(); // color
                 moving = (packet.getByte() == 1);
+                localDead = (packet.getByte() == 1);
                 angle = packet.getFloat();
 
                 // store local player
@@ -116,6 +130,7 @@ public class GameWindow extends JFrame implements NetworkStateReceiver
                     y = packet.getFloat();
                     param = packet.getInt(); // color
                     moving = (packet.getByte() == 1);
+                    dead = (packet.getByte() == 1); // maybe won't be used at all here
                     angle = packet.getFloat();
 
                     // create player
@@ -156,7 +171,10 @@ public class GameWindow extends JFrame implements NetworkStateReceiver
 
                 canvas.initCanvas(this);
             }
-            canvas.setWeAreDead(false);
+
+            canvas.setWeAreDead(localDead);
+
+            canvas.setConnectionLostState(0);
 
             gameInitialized = true;
         }
@@ -238,7 +256,7 @@ public class GameWindow extends JFrame implements NetworkStateReceiver
             // standard player create block
             int id, size, param;
             float x, y, angle;
-            boolean moving;
+            boolean moving, dead;
             String name;
 
             id = packet.getInt();
@@ -248,6 +266,7 @@ public class GameWindow extends JFrame implements NetworkStateReceiver
             y = packet.getFloat();
             param = packet.getInt(); // color
             moving = (packet.getByte() == 1);
+            dead = (packet.getByte() == 1); // also won't be used here, probably
             angle = packet.getFloat();
 
             // create player, if it's not us
@@ -380,12 +399,44 @@ public class GameWindow extends JFrame implements NetworkStateReceiver
                 }
             }
         }
+        else if (packet.getOpcode() == Opcodes.SP_RESTORE_SESSION_RESPONSE.val())
+        {
+            int statusCode = packet.getByte();
+            if (statusCode != 0)
+            {
+                // TODO: disconnect!
+
+                JOptionPane.showMessageDialog(null, "Přihlášení vypršelo, prosím, přihlašte se znovu!", "Nelze obnovit spojení", JOptionPane.ERROR_MESSAGE);
+            }
+            else
+            {
+                int roomId = packet.getInt();
+                if (roomId != 0)
+                {
+                    int chatChannel = packet.getInt();
+                }
+
+                initGame(true);
+            }
+        }
+
+        return true;
     }
 
     @Override
-    public void OnConnectionStateChanged(ConnectionState state)
+    public boolean OnConnectionStateChanged(ConnectionState state)
     {
-        //
+        if (state == ConnectionState.DISCONNECTED_RETRY)
+        {
+            canvas.setConnectionLostState(1);
+            GameStorage.getInstance().wipeAll();
+        }
+        else if (state == ConnectionState.CONNECTED)
+        {
+            canvas.setConnectionLostState(2);
+        }
+
+        return true;
     }
 
 }

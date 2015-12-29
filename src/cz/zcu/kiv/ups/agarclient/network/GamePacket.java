@@ -16,6 +16,8 @@ public strictfp class GamePacket
     private short opcode = 0;
     /** packet contents size */
     private short size = 0;
+    /** packet read pos */
+    private int readPos = 0;
 
     /** write buffer for packet building */
     private ByteArrayOutputStream writeBuffer;
@@ -90,6 +92,24 @@ public strictfp class GamePacket
     public int getSize()
     {
         return size;
+    }
+
+    /**
+     * Retrieves packet real size
+     * @return packet real size
+     */
+    public int getRealSize()
+    {
+        return readBuffer.capacity();
+    }
+
+    /**
+     * Retrieves packet read position
+     * @return packet read position
+     */
+    public int getReadPos()
+    {
+        return readPos;
     }
 
     /**
@@ -183,6 +203,7 @@ public strictfp class GamePacket
         while (true)
         {
             char c = (char)readBuffer.get();
+            readPos++;
             if (c == '\0')
                 break;
             ret += c;
@@ -196,6 +217,7 @@ public strictfp class GamePacket
      */
     public int getInt()
     {
+        readPos += 4;
         return readBuffer.getInt();
     }
 
@@ -205,6 +227,7 @@ public strictfp class GamePacket
      */
     public short getShort()
     {
+        readPos += 2;
         return readBuffer.getShort();
     }
 
@@ -214,6 +237,7 @@ public strictfp class GamePacket
      */
     public byte getByte()
     {
+        readPos += 1;
         return readBuffer.get();
     }
 
@@ -223,6 +247,7 @@ public strictfp class GamePacket
      */
     public float getFloat()
     {
+        readPos += 4;
         return readBuffer.getFloat();
     }
 

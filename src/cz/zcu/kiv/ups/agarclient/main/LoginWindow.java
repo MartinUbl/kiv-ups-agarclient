@@ -148,6 +148,8 @@ public class LoginWindow extends JFrame implements NetworkStateReceiver
                 // connect to host
                 Networking.getInstance().startUp();
 
+                Main.setPlayerName(usernameField.getText());
+
                 // build login packet
                 GamePacket gp = new GamePacket(Opcodes.CP_LOGIN.val());
 
@@ -170,6 +172,8 @@ public class LoginWindow extends JFrame implements NetworkStateReceiver
                 Networking.getInstance().setHostInfo(hostField.getText(), Integer.parseInt(portField.getText()));
                 // connect to host
                 Networking.getInstance().startUp();
+
+                Main.setPlayerName(usernameField.getText());
 
                 // build register packet
                 GamePacket gp = new GamePacket(Opcodes.CP_REGISTER.val());
@@ -212,7 +216,7 @@ public class LoginWindow extends JFrame implements NetworkStateReceiver
     }
 
     @Override
-    public void OnPacketReceived(GamePacket packet)
+    public boolean OnPacketReceived(GamePacket packet)
     {
         if (packet.getOpcode() == Opcodes.SP_LOGIN_RESPONSE.val())
         {
@@ -226,9 +230,13 @@ public class LoginWindow extends JFrame implements NetworkStateReceiver
                     int plid = packet.getInt();
                     Main.setPlayerId(plid);
 
+                    String sessKey = packet.getString();
+                    Main.setSessionKey(sessKey);
+                    System.out.println("Session key: "+sessKey);
+
                     setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
                     goToLobby();
-                    return;
+                    return true;
                 case 1: // invalid name
                     resultText.setText("Neexistující uživatel!");
                     break;
@@ -252,6 +260,9 @@ public class LoginWindow extends JFrame implements NetworkStateReceiver
 
                     int plid = packet.getInt();
                     Main.setPlayerId(plid);
+
+                    String sessKey = packet.getString();
+                    Main.setSessionKey(sessKey);
 
                     setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
                     goToLobby();
@@ -282,15 +293,19 @@ public class LoginWindow extends JFrame implements NetworkStateReceiver
 
             setButtonsEnabled(true);
         }
+
+        return true;
     }
 
     @Override
-    public void OnConnectionStateChanged(ConnectionState state)
+    public boolean OnConnectionStateChanged(ConnectionState state)
     {
         if (state == ConnectionState.CONNECTION_FAILED)
         {
             JOptionPane.showMessageDialog(null, "Spojení se serverem nemohlo být navázáno!", "Nelze se připojit", JOptionPane.ERROR_MESSAGE);
             setButtonsEnabled(true);
         }
+
+        return true;
     }
 }

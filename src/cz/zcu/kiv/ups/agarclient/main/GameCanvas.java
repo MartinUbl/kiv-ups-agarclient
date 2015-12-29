@@ -55,6 +55,8 @@ public strictfp class GameCanvas extends JPanel implements ActionListener
 
     /** Flag for "we have been eaten" */
     private boolean weAreDead = false;
+    /** Flag and status for "connection lost" */
+    private int connectionLost = 0;
 
     /** parent frame */
     private GameWindow parentFrame = null;
@@ -133,6 +135,15 @@ public strictfp class GameCanvas extends JPanel implements ActionListener
     public boolean getWeAreDead()
     {
         return weAreDead;
+    }
+
+    /**
+     * Sets state of connection loss
+     * @param state state
+     */
+    public void setConnectionLostState(int state)
+    {
+        connectionLost = state;
     }
 
     /**
@@ -268,6 +279,27 @@ public strictfp class GameCanvas extends JPanel implements ActionListener
     {
         // turn antialiasing on
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+        if (connectionLost > 0)
+        {
+            g2.setColor(Color.GRAY);
+            g2.fillRect(0, 0, getWidth(), getHeight());
+
+            g2.setColor(Color.BLACK);
+            String toDraw = "Spojení bylo ztraceno";
+            g2.drawString(toDraw, (getWidth() - g2.getFontMetrics().stringWidth(toDraw)) / 2, getHeight() / 2);
+
+            toDraw = "Pokus o obnovení...";
+            g2.drawString(toDraw, (getWidth() - g2.getFontMetrics().stringWidth(toDraw)) / 2, getHeight() / 2 + 40);
+
+            if (connectionLost == 2)
+            {
+                toDraw = "Obnovování pozice ve hře...";
+                g2.drawString(toDraw, (getWidth() - g2.getFontMetrics().stringWidth(toDraw)) / 2, getHeight() / 2 + 60);
+            }
+
+            return;
+        }
 
         // when we are dead, just display, what we can do
         if (weAreDead)

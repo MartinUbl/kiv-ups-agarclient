@@ -4,11 +4,14 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
+import java.net.SocketTimeoutException;
 import java.nio.ByteBuffer;
 import java.util.LinkedList;
 import java.util.Queue;
 import java.nio.channels.SocketChannel;
 
+import cz.zcu.kiv.ups.agarclient.enums.Opcodes;
+import cz.zcu.kiv.ups.agarclient.main.Main;
 import cz.zcu.kiv.ups.agarclient.main.NetworkStateReceiver;
 
 /**
@@ -18,6 +21,9 @@ import cz.zcu.kiv.ups.agarclient.main.NetworkStateReceiver;
  */
 public class Networking extends Thread
 {
+    /** socket i/o timeout in milliseconds */
+    private static final int SOCKET_IO_TIMEOUT = 5000;
+
     /** Only one networking class instance (singleton) */
     private static Networking INSTANCE = null;
 
@@ -31,15 +37,22 @@ public class Networking extends Thread
     private int port;
     /** remote host address */
     private String host;
+    /** is connected? */
+    private boolean isConnected = false;
 
     /** flag for socket shutdown */
     private boolean isShuttingDown = false;
+
+    /** State of our connection to server */
+    private ConnectionState connectionState = ConnectionState.IDLE;
 
     /** packet send queue */
     private Queue<GamePacket> sendQueue = new LinkedList<GamePacket>();
 
     /** registered state receiver */
     private NetworkStateReceiver stateReceiver = null;
+    /** generic state receiver */
+    private NetworkStateReceiver genericReceiver = new GenericPacketHandler();
 
     /**
      * Implicit constructor, just have to be private due to singleton pattern used
@@ -98,6 +111,9 @@ public class Networking extends Thread
         try
         {
             s = new Socket(host, port);
+
+            // sets socket i/o timeout
+            //s.setSoTimeout(SOCKET_IO_TIMEOUT);
         }
         catch (IOException e)
         {
@@ -120,8 +136,6 @@ public class Networking extends Thread
             istream = s.getInputStream();
             ostream = s.getOutputStream();
 
-            System.out.println("Connected to "+s.getInetAddress()+":"+s.getPort());
-
             // Set receive buffer size to maximum (unsigned) short value
             // this will allow us to wait for whole packets instead of reading by fragments
             s.setReceiveBufferSize(65535);
@@ -142,13 +156,17 @@ public class Networking extends Thread
     {
         try
         {
+            System.out.println("Sending: "+msg.getOpcode());
             // write raw data and flush to be sent
             ostream.write(msg.getRaw());
             ostream.flush();
         }
         catch (Exception e)
         {
-            System.err.println("Write error: "+e.getMessage());
+            System.err.println("Write error: "+e.toString());
+
+            isConnected = false;
+            _sendConnectionStateChange(ConnectionState.DISCONNECTED_RETRY);
         }
     }
 
@@ -156,9 +174,17 @@ public class Networking extends Thread
      * Enqueues packet for sending
      * @param msg packet to be sent
      */
-    public synchronized void sendPacket(GamePacket msg)
+    public void sendPacket(GamePacket msg)
     {
-        sendQueue.add(msg);
+        if (isConnected)
+            _sendPacket(msg);
+        else
+        {
+            synchronized (this)
+            {
+                sendQueue.add(msg);
+            }
+        }
     }
 
     /**
@@ -191,11 +217,6 @@ public class Networking extends Thread
         byte[] header, data;
         try
         {
-            // we need to have at least 4 bytes available (whole header), if not, pass the
-            // CPU time to another thread
-            while (istream.available() < 4)
-                Thread.yield();
-
             // allocate space for header
             header = new byte[4];
             // read header
@@ -211,21 +232,26 @@ public class Networking extends Thread
             bb.rewind();
             size = bb.getInt() & 0xFFFF; // there is always a way, how to get unsigned short range
 
+            // wait for needed bytes count
+            while (istream.available() < size)
+                Thread.yield();
+
             // read data (blocking call)
             data = new byte[size];
-
-            // wait for needed size to be available - this is possible due to readbuffer having size of
-            // maximum unsigned short value
-            while (istream.available() < size)
-                Thread.yield(); // pass CPU time to another thread
-
             istream.read(data, 0, size);
             // build packet and return it
             return new GamePacket((short)opcode, (short)size, data);
         }
         catch (IOException e)
         {
-            System.err.println("Read error");
+            System.err.println("Read error "+e.toString());
+
+            isConnected = false;
+            _sendConnectionStateChange(ConnectionState.DISCONNECTED_RETRY);
+        }
+        catch (Exception e)
+        {
+            System.err.println("Generic read error: "+e.toString());
         }
 
         return null;
@@ -249,10 +275,22 @@ public class Networking extends Thread
     /**
      * Reads packet from network socket and passes it by to hooked receiver
      */
-    private synchronized void _readAndDispatchPacket()
+    private void _readAndDispatchPacket()
     {
-        if (stateReceiver != null)
-            stateReceiver.OnPacketReceived(_readPacket());
+        GamePacket pkt = _readPacket();
+
+        if (pkt == null)
+            return;
+
+        synchronized (this)
+        {
+            // at first, try to handle by generic receiver. If successful, do not handle further
+            if (genericReceiver.OnPacketReceived(pkt))
+                return;
+
+            if (stateReceiver != null)
+                stateReceiver.OnPacketReceived(pkt);
+        }
     }
 
     /**
@@ -261,8 +299,10 @@ public class Networking extends Thread
      */
     private synchronized void _sendConnectionStateChange(ConnectionState state)
     {
-        if (stateReceiver != null)
+        if (!genericReceiver.OnConnectionStateChanged(state) && stateReceiver != null)
             stateReceiver.OnConnectionStateChanged(state);
+
+        connectionState = state;
     }
 
     /**
@@ -291,6 +331,26 @@ public class Networking extends Thread
         isShuttingDown = true;
     }
 
+    /**
+     * Disconnects client from server
+     */
+    public void disconnect()
+    {
+        // set disconnected state
+        _sendConnectionStateChange(ConnectionState.DISCONNECTED);
+        isConnected = false;
+
+        // interrupt reading operation
+        interrupt();
+    }
+
+    private void sendRestoreSession()
+    {
+        GamePacket gp = new GamePacket(Opcodes.CP_RESTORE_SESSION.val());
+        gp.putString(Main.getSessionKey());
+        sendPacket(gp);
+    }
+
     @Override
     public void run()
     {
@@ -299,30 +359,76 @@ public class Networking extends Thread
             // at first, attempt to connect to remote host
             if (!connectToServer())
             {
-                // if unsuccessful, send failed state
-                _sendConnectionStateChange(ConnectionState.CONNECTION_FAILED);
+                // if unsuccessful, send failed state (if not retrying)
+                if (connectionState != ConnectionState.DISCONNECTED_RETRY)
+                {
+                    _sendConnectionStateChange(ConnectionState.CONNECTION_FAILED);
+
+                    try
+                    {
+                        synchronized (this)
+                        {
+                            wait();
+                        }
+                    }
+                    catch (InterruptedException e)
+                    {
+                        //
+                    }
+                }
+                else // if retrying, just sleep for a few seconds and try again later
+                {
+                    try
+                    {
+                        System.out.println("Connection to "+s.getInetAddress()+":"+s.getPort()+" failed, retrying in 3s");
+                        Thread.sleep(3000);
+                    }
+                    catch (InterruptedException e)
+                    {
+                        //
+                    }
+                }
+
+                continue;
+            }
+
+            System.out.println("Connected to "+s.getInetAddress()+":"+s.getPort());
+
+            if (connectionState == ConnectionState.DISCONNECTED_RETRY)
+            {
+                System.out.println("Attempting to restore old session");
+                sendRestoreSession();
+            }
+
+            _sendConnectionStateChange(ConnectionState.CONNECTED);
+
+            isConnected = true;
+
+            // while there's some packets to be sent, send them
+            while (!isPacketQueueEmpty())
+                _sendPacket(getPacketToSend());
+
+            // this loop will be repeated until there's a chance something will need to be sent/received to/from network
+            while (!s.isClosed() && !isShuttingDown && isConnected)
+            {
+                // while there's something waiting on socket, read it and dispatch it
+                _readAndDispatchPacket();
+            }
+
+            // if we were disconnected by external signal (i.e. kicked by server), wait for another user-supplied signal
+            if (!isShuttingDown && !isConnected && connectionState == ConnectionState.DISCONNECTED)
+            {
                 try
                 {
                     synchronized (this)
                     {
                         wait();
                     }
-                } catch (InterruptedException e) { }
-                continue;
-            }
-            // otherwise send connected state
-            _sendConnectionStateChange(ConnectionState.CONNECTED);
-
-            // this loop will be repeated until there's a chance something will need to be sent/received to/from network
-            while (!s.isClosed() && !isShuttingDown)
-            {
-                // while there's some packets to be sent, send them
-                while (!isPacketQueueEmpty())
-                    _sendPacket(getPacketToSend());
-
-                // while there's something waiting on socket, read it and dispatch it
-                while (!isInputStreamEmpty())
-                    _readAndDispatchPacket();
+                }
+                catch (InterruptedException e)
+                {
+                    //
+                }
             }
         }
 

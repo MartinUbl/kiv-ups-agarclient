@@ -15,11 +15,11 @@ public interface NetworkStateReceiver
      * Called when valid packet is received
      * @param packet received, parsed packet
      */
-    public void OnPacketReceived(GamePacket packet);
+    public boolean OnPacketReceived(GamePacket packet);
 
     /**
      * Called when connection state is changed
      * @param state new state
      */
-    public void OnConnectionStateChanged(ConnectionState state);
+    public boolean OnConnectionStateChanged(ConnectionState state);
 }

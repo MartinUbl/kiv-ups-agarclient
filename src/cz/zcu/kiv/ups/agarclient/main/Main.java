@@ -13,6 +13,13 @@ public class Main
 
     /** Player unique identifier */
     private static int playerId = 0;
+    /** Player username */
+    private static String playerName = null;
+    /** Player session key identifier */
+    private static String sessionKey = null;
+
+    /** Client network latency */
+    private static int clientLatency = -1;
 
     /**
      * Main application method
@@ -44,5 +51,59 @@ public class Main
     public static void setPlayerId(int id)
     {
         playerId = id;
+    }
+
+    /**
+     * Retrieves client latency to be shown
+     * @return latency
+     */
+    public static int getClientLatency()
+    {
+        return clientLatency;
+    }
+
+    /**
+     * Sets client latency
+     * @param lat latency
+     */
+    public static void setClientLatency(int lat)
+    {
+        clientLatency = lat;
+    }
+
+    /**
+     * Retrieves session key
+     * @return session key
+     */
+    public static String getSessionKey()
+    {
+        return sessionKey;
+    }
+
+    /**
+     * Sets new session key
+     * @param str session key
+     */
+    public static void setSessionKey(String str)
+    {
+        sessionKey = str;
+    }
+
+    /**
+     * Retrieves player name
+     * @return player name
+     */
+    public static String getPlayerName()
+    {
+        return playerName;
+    }
+
+    /**
+     * Sets player username
+     * @param str username
+     */
+    public static void setPlayerName(String str)
+    {
+        playerName = str;
     }
 }

@@ -164,7 +164,7 @@ public class LobbyWindow extends JFrame implements NetworkStateReceiver, ActionL
     }
 
     @Override
-    public void OnPacketReceived(GamePacket packet)
+    public boolean OnPacketReceived(GamePacket packet)
     {
         // room list response
         if (packet.getOpcode() == Opcodes.SP_ROOM_LIST_RESPONSE.val())
@@ -210,12 +210,45 @@ public class LobbyWindow extends JFrame implements NetworkStateReceiver, ActionL
                     break;
             }
         }
+        else if (packet.getOpcode() == Opcodes.SP_RESTORE_SESSION_RESPONSE.val())
+        {
+            int statusCode = packet.getByte();
+            if (statusCode != 0)
+            {
+                Networking.getInstance().disconnect();
+
+                JOptionPane.showMessageDialog(null, "Přihlášení vypršelo, prosím, přihlašte se znovu!", "Nelze obnovit spojení", JOptionPane.ERROR_MESSAGE);
+            }
+            else
+            {
+                initRoomList(GAMETYPE_FREEFORALL);
+            }
+        }
+
+        return true;
     }
 
     @Override
-    public void OnConnectionStateChanged(ConnectionState state)
+    public boolean OnConnectionStateChanged(ConnectionState state)
     {
-        //
+        if (state == ConnectionState.DISCONNECTED_RETRY)
+        {
+            // TODO: show label, disable UI
+        }
+        else if (state == ConnectionState.CONNECTED)
+        {
+            // TODO: hide label
+        }
+        else if (state == ConnectionState.DISCONNECTED)
+        {
+            LoginWindow lw = new LoginWindow();
+            lw.initComponents();
+            Networking.getInstance().registerStateReceiver(lw);
+            setVisible(false);
+            lw.setVisible(true);
+        }
+
+        return true;
     }
 
     @Override
