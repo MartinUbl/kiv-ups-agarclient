@@ -4,11 +4,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
-import java.net.SocketTimeoutException;
+import java.net.SocketException;
 import java.nio.ByteBuffer;
 import java.util.LinkedList;
 import java.util.Queue;
-import java.nio.channels.SocketChannel;
 
 import cz.zcu.kiv.ups.agarclient.enums.Opcodes;
 import cz.zcu.kiv.ups.agarclient.main.Main;
@@ -239,15 +238,29 @@ public class Networking extends Thread
             // read data (blocking call)
             data = new byte[size];
             istream.read(data, 0, size);
+
             // build packet and return it
             return new GamePacket((short)opcode, (short)size, data);
         }
+        catch (SocketException e)
+        {
+            if (isConnected)
+            {
+                System.err.println("Read error "+e.toString());
+
+                isConnected = false;
+                _sendConnectionStateChange(ConnectionState.DISCONNECTED_RETRY);
+            }
+        }
         catch (IOException e)
         {
-            System.err.println("Read error "+e.toString());
+            if (isConnected)
+            {
+                System.err.println("Read error "+e.toString());
 
-            isConnected = false;
-            _sendConnectionStateChange(ConnectionState.DISCONNECTED_RETRY);
+                isConnected = false;
+                _sendConnectionStateChange(ConnectionState.DISCONNECTED_RETRY);
+            }
         }
         catch (Exception e)
         {
@@ -255,21 +268,6 @@ public class Networking extends Thread
         }
 
         return null;
-    }
-
-    /**
-     * Retrieves input stream emptiness state
-     * @return is input stream empty?
-     */
-    private boolean isInputStreamEmpty()
-    {
-        try {
-            return istream.available() == 0;
-        } catch (IOException e) {
-            //
-        }
-
-        return true;
     }
 
     /**
@@ -340,8 +338,14 @@ public class Networking extends Thread
         _sendConnectionStateChange(ConnectionState.DISCONNECTED);
         isConnected = false;
 
-        // interrupt reading operation
-        interrupt();
+        try
+        {
+            s.close();
+        }
+        catch (IOException e)
+        {
+            e.printStackTrace();
+        }
     }
 
     private void sendRestoreSession()

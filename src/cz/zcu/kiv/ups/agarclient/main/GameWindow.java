@@ -404,7 +404,7 @@ public class GameWindow extends JFrame implements NetworkStateReceiver
             int statusCode = packet.getByte();
             if (statusCode != 0)
             {
-                // TODO: disconnect!
+                Networking.getInstance().disconnect();
 
                 JOptionPane.showMessageDialog(null, "Přihlášení vypršelo, prosím, přihlašte se znovu!", "Nelze obnovit spojení", JOptionPane.ERROR_MESSAGE);
             }
@@ -434,6 +434,14 @@ public class GameWindow extends JFrame implements NetworkStateReceiver
         else if (state == ConnectionState.CONNECTED)
         {
             canvas.setConnectionLostState(2);
+        }
+        else if (state == ConnectionState.DISCONNECTED)
+        {
+            LoginWindow lw = new LoginWindow();
+            lw.initComponents();
+            Networking.getInstance().registerStateReceiver(lw);
+            setVisible(false);
+            lw.setVisible(true);
         }
 
         return true;
