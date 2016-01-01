@@ -12,6 +12,7 @@ import java.awt.event.MouseEvent;
 import javax.swing.ButtonGroup;
 import javax.swing.DefaultListModel;
 import javax.swing.JButton;
+import javax.swing.JDialog;
 import javax.swing.JFrame;
 import javax.swing.JList;
 import javax.swing.JOptionPane;
@@ -42,7 +43,7 @@ public class LobbyWindow extends JFrame implements NetworkStateReceiver, ActionL
     /** Model for room list */
     private DefaultListModel<RoomListItem> roomListModel = new DefaultListModel<RoomListItem>();
     /** Button for joining room */
-    private JButton joinButton;
+    private JButton joinButton, createButton;
 
     /**
      * Initializes contents of this frame
@@ -92,12 +93,19 @@ public class LobbyWindow extends JFrame implements NetworkStateReceiver, ActionL
         // button panel
         JPanel btnPanel = new JPanel();
         btnPanel.setLayout(new GridLayout(1,2));
-        JButton btn;
 
         // and finally buttons for creating/joining room
-        btn = new JButton("Založit místnost");
-        btn.setEnabled(false); // DISABLED FOR NOW!!! Will be enabled after implementation
-        btnPanel.add(btn);
+        createButton = new JButton("Založit místnost");
+        btnPanel.add(createButton);
+        final JFrame parent = this;
+        createButton.addMouseListener(new MouseAdapter() {
+            public void mouseClicked(MouseEvent e)
+            {
+                NewRoomDialog nrd = new NewRoomDialog(parent);
+                nrd.initComponents();
+                nrd.setVisible(true);
+            }
+        });
 
         joinButton = new JButton("Vstoupit");
         btnPanel.add(joinButton);
@@ -112,6 +120,7 @@ public class LobbyWindow extends JFrame implements NetworkStateReceiver, ActionL
                 else
                 {
                     joinButton.setEnabled(false);
+                    createButton.setEnabled(false);
                     GamePacket gp = new GamePacket(Opcodes.CP_JOIN_ROOM.val());
                     gp.putInt(rli.getRoomId());
                     gp.putByte(0); // spectator - 0 for now, TODO: will be implemented later
@@ -192,6 +201,7 @@ public class LobbyWindow extends JFrame implements NetworkStateReceiver, ActionL
             int chatChannel = packet.getInt(); // TODO: chat
 
             joinButton.setEnabled(true);
+            createButton.setEnabled(true);
 
             switch (statusCode)
             {
@@ -207,6 +217,27 @@ public class LobbyWindow extends JFrame implements NetworkStateReceiver, ActionL
                 case 3: // no such room (should not happen)
                     break;
                 case 4: // already in room (should not happen)
+                    break;
+            }
+        }
+        else if (packet.getOpcode() == Opcodes.SP_CREATE_ROOM_RESPONSE.val())
+        {
+            int statusCode = packet.getByte();
+            int chatChannel = packet.getInt(); // TODO: chat
+
+            joinButton.setEnabled(true);
+            createButton.setEnabled(true);
+
+            switch (statusCode)
+            {
+                case 0: // all OK
+                    switchToGame();
+                    break;
+                case 1: // failed due to capacity
+                    JOptionPane.showMessageDialog(null, "Server již nedovoluje zakládat další místnosti!", "Nelze vytvořit", JOptionPane.ERROR_MESSAGE);
+                    break;
+                case 2: // invalid parameters
+                    JOptionPane.showMessageDialog(null, "Byly zadány neplatné parametry!", "Nelze vytvořit", JOptionPane.ERROR_MESSAGE);
                     break;
             }
         }
@@ -234,6 +265,10 @@ public class LobbyWindow extends JFrame implements NetworkStateReceiver, ActionL
         if (state == ConnectionState.DISCONNECTED_RETRY)
         {
             // TODO: show label, disable UI
+
+            roomList.setEnabled(false);
+            joinButton.setEnabled(false);
+            createButton.setEnabled(false);
         }
         else if (state == ConnectionState.CONNECTED)
         {

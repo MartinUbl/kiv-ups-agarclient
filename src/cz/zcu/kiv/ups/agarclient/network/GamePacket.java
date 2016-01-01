@@ -3,7 +3,10 @@ package cz.zcu.kiv.ups.agarclient.network;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Game packet class
@@ -128,9 +131,9 @@ public strictfp class GamePacket
     public void putString(String str)
     {
         try {
-            writeBufferGate.write(str.getBytes());
+            writeBufferGate.write(str.getBytes("UTF-8"));
             writeBufferGate.write(0); // make sure the string is null terminated
-            size += str.length() + 1;
+            size += str.getBytes("UTF-8").length + 1;
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -198,17 +201,32 @@ public strictfp class GamePacket
      */
     public String getString()
     {
-        String ret = new String();
+        byte c;
+        List<Byte> lbs = new ArrayList<Byte>();
+
         // read, until we reach zero terminator
         while (true)
         {
-            char c = (char)readBuffer.get();
-            readPos++;
+            c = (byte)((readBuffer.get()) & 0xFF);
+
             if (c == '\0')
                 break;
-            ret += c;
+
+            lbs.add((byte)c);
         }
-        return ret;
+
+        // convert list of Bytes to array of primitive bytes
+        byte[] barr = new byte[lbs.size()];
+        int i = 0;
+        for (Byte b : lbs)
+            barr[i++] = b;
+
+        try {
+            return new String(barr, "UTF-8");
+        } catch (UnsupportedEncodingException e) {
+            // just try at least some encoding
+            return new String(barr);
+        }
     }
 
     /**

@@ -242,6 +242,8 @@ public strictfp class GameCanvas extends JPanel implements ActionListener
                 // when we are dead, use space to restart the game
                 if (weAreDead && e.getKeyCode() == KeyEvent.VK_SPACE)
                 {
+                    GameStorage.getInstance().wipeAll();
+
                     // this will send "new world" request, just as when the game starts
                     parentFrame.initGame();
                 }
@@ -262,10 +264,7 @@ public strictfp class GameCanvas extends JPanel implements ActionListener
         super.paint(g);
 
         // paint our stuff
-        synchronized (Networking.getInstance())
-        {
-            doPaint((Graphics2D)g);
-        }
+        doPaint((Graphics2D)g);
 
         // synchronize buffers
         Toolkit.getDefaultToolkit().sync();
@@ -318,47 +317,57 @@ public strictfp class GameCanvas extends JPanel implements ActionListener
             return;
         }
 
-        GameStorage gsInst = GameStorage.getInstance();
-
-        // retrieve everything we need to be drawn
-        List<WorldObject> wobjs = gsInst.getVisibleObjects();
-        List<PlayerObject> plrs = gsInst.getVisiblePlayers();
-        LocalPlayer pl = gsInst.getLocalPlayer();
 
         // clear background
         g2.setColor(Color.WHITE);
         g2.fillRect(0, 0, getWidth(), getHeight());
 
+        GameStorage gsInst = GameStorage.getInstance();
         int plsize;
 
+        LocalPlayer pl = gsInst.getLocalPlayer();
         // get reference points
         float refX = pl.positionX - (getWidth() / 2) / DRAW_UNIT_COEF;
         float refY = pl.positionY - (getHeight() / 2) / DRAW_UNIT_COEF;
 
-        // draw all objects
-        for (WorldObject obj : wobjs)
+        g2.setColor(Color.BLACK);
+        g2.drawString(Math.round(pl.positionX*100.0f)/100.0f+" ; "+Math.round(pl.positionY*100.0f)/100.0f, 5, 15);
+
+        // retrieve everything we need to be drawn
+        synchronized (GameStorage.worldObjectLock)
         {
-            if (obj.localIntersect)
-                continue;
+            List<WorldObject> wobjs = gsInst.getVisibleObjects();
 
-            if (obj.typeId == ObjectTypeId.OBJECT_TYPE_IDLEFOOD.val()) // eatable food
-                g2.setColor(Color.GREEN);
-            else if (obj.typeId == ObjectTypeId.OBJECT_TYPE_BONUSFOOD.val()) // bonuses
-                g2.setColor(Color.BLUE);
-            else if (obj.typeId == ObjectTypeId.OBJECT_TYPE_TRAP.val()) // traps
-                g2.setColor(Color.RED);
+            // draw all objects
+            for (WorldObject obj : wobjs)
+            {
+                if (obj.localIntersect)
+                    continue;
 
-            g2.fillOval((int)((obj.positionX - refX)*DRAW_UNIT_COEF), (int)((obj.positionY - refY)*DRAW_UNIT_COEF), 5, 5);
+                if (obj.typeId == ObjectTypeId.OBJECT_TYPE_IDLEFOOD.val()) // eatable food
+                    g2.setColor(Color.GREEN);
+                else if (obj.typeId == ObjectTypeId.OBJECT_TYPE_BONUSFOOD.val()) // bonuses
+                    g2.setColor(Color.BLUE);
+                else if (obj.typeId == ObjectTypeId.OBJECT_TYPE_TRAP.val()) // traps
+                    g2.setColor(Color.RED);
+
+                g2.fillOval((int)((obj.positionX - refX)*DRAW_UNIT_COEF), (int)((obj.positionY - refY)*DRAW_UNIT_COEF), 5, 5);
+            }
         }
 
-        // draw all players
-        for (PlayerObject plr : plrs)
+        synchronized (GameStorage.playerObjectLock)
         {
-            g2.setColor(new Color(plr.param));
-            plsize = (int)(plr.size * PLAYER_SIZE_COEF);
-            g2.fillOval((int)((plr.positionX - refX)*DRAW_UNIT_COEF) - plsize / 2, (int)((plr.positionY - refY)*DRAW_UNIT_COEF) - plsize / 2, plsize, plsize);
+            List<PlayerObject> plrs = gsInst.getVisiblePlayers();
 
-            g2.drawString(plr.name, (int)((plr.positionX - refX)*DRAW_UNIT_COEF) - g2.getFontMetrics().stringWidth(plr.name) / 2, (int)((plr.positionY - refY)*DRAW_UNIT_COEF) - plsize / 2 - 4);
+            // draw all players
+            for (PlayerObject plr : plrs)
+            {
+                g2.setColor(new Color(plr.param));
+                plsize = (int)(plr.size * PLAYER_SIZE_COEF);
+                g2.fillOval((int)((plr.positionX - refX)*DRAW_UNIT_COEF) - plsize / 2, (int)((plr.positionY - refY)*DRAW_UNIT_COEF) - plsize / 2, plsize, plsize);
+
+                g2.drawString(plr.name, (int)((plr.positionX - refX)*DRAW_UNIT_COEF) - g2.getFontMetrics().stringWidth(plr.name) / 2, (int)((plr.positionY - refY)*DRAW_UNIT_COEF) - plsize / 2 - 4);
+            }
         }
 
         // paint our player
@@ -465,7 +474,7 @@ public strictfp class GameCanvas extends JPanel implements ActionListener
     @Override
     public void actionPerformed(ActionEvent arg0)
     {
-        synchronized (Networking.getInstance())
+        synchronized (GameStorage.playerObjectLock)
         {
             if (!weAreDead)
                 updateMovement();

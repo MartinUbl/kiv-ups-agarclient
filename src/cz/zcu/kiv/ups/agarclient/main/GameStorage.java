@@ -25,7 +25,14 @@ public class GameStorage
     /** Base movement coefficient */
     public static final float MOVE_MS_COEF_MAX = 0.0065f; // 0.0065f
     /** Minimum movement speed */
-    public static final float MOVE_MS_COEF_MIN = 0.0025f; // 0.0025f
+    public static final float MOVE_MS_COEF_MIN = 0.0015f; // 0.0025f
+
+    /** world object list monitor */
+    public static final Object worldObjectLock = new Object();
+    /** player object list monitor */
+    public static final Object playerObjectLock = new Object();
+    /** grid map list monitor */
+    public static final Object gridMapLock = new Object();
 
     /** Map width */
     private float mapSizeX = 0.0f;
@@ -125,9 +132,15 @@ public class GameStorage
     {
         if (!worldObjects.contains(obj))
         {
-            worldObjects.add(obj);
+            synchronized (worldObjectLock)
+            {
+                worldObjects.add(obj);
+            }
 
-            gridMap.get(getCellIndex(obj.positionX)).get(getCellIndex(obj.positionY)).add(obj);
+            synchronized (gridMapLock)
+            {
+                gridMap.get(getCellIndex(obj.positionX)).get(getCellIndex(obj.positionY)).add(obj);
+            }
         }
     }
 
@@ -137,9 +150,15 @@ public class GameStorage
      */
     public void removeWorldObject(WorldObject obj)
     {
-        worldObjects.remove(obj);
+        synchronized (worldObjectLock)
+        {
+            worldObjects.remove(obj);
+        }
 
-        gridMap.get(getCellIndex(obj.positionX)).get(getCellIndex(obj.positionY)).remove(obj);
+        synchronized (gridMapLock)
+        {
+            gridMap.get(getCellIndex(obj.positionX)).get(getCellIndex(obj.positionY)).remove(obj);
+        }
     }
 
     /**
@@ -159,9 +178,15 @@ public class GameStorage
     {
         if (!playerObjects.contains(obj))
         {
-            playerObjects.add(obj);
+            synchronized (playerObjectLock)
+            {
+                playerObjects.add(obj);
+            }
 
-            gridMap.get(getCellIndex(obj.positionX)).get(getCellIndex(obj.positionY)).add(obj);
+            synchronized (gridMapLock)
+            {
+                gridMap.get(getCellIndex(obj.positionX)).get(getCellIndex(obj.positionY)).add(obj);
+            }
         }
     }
 
@@ -171,9 +196,15 @@ public class GameStorage
      */
     public void removePlayerObject(PlayerObject obj)
     {
-        playerObjects.remove(obj);
+        synchronized (playerObjectLock)
+        {
+            playerObjects.remove(obj);
+        }
 
-        gridMap.get(getCellIndex(obj.positionX)).get(getCellIndex(obj.positionY)).remove(obj);
+        synchronized (gridMapLock)
+        {
+            gridMap.get(getCellIndex(obj.positionX)).get(getCellIndex(obj.positionY)).remove(obj);
+        }
     }
 
     /**
@@ -185,7 +216,10 @@ public class GameStorage
     {
         List<WorldObject> wobl = gridMap.get(indexX).get(indexY);
         // remove all world objects and players from that cell
-        worldObjects.removeAll(wobl);
+        synchronized (worldObjectLock)
+        {
+            worldObjects.removeAll(wobl);
+        }
 
         // player objects will be removed by packet from server
         //playerObjects.removeAll(...);
@@ -200,7 +234,7 @@ public class GameStorage
      * @param nx new x
      * @param ny new y
      */
-    public synchronized void movePlayer(PlayerObject obj, float nx, float ny)
+    public void movePlayer(PlayerObject obj, float nx, float ny)
     {
         int cellX, cellY, cellXNew, cellYNew;
 
@@ -210,67 +244,73 @@ public class GameStorage
         cellXNew = getCellIndex(nx);
         cellYNew = getCellIndex(ny);
 
-        obj.positionX = nx;
-        obj.positionY = ny;
-
-        // if player moved between cells, relocate
-        if (cellX != cellXNew || cellY != cellYNew || !gridMap.get(cellX).get(cellY).contains(obj))
+        synchronized (playerObjectLock)
         {
-            gridMap.get(cellX).get(cellY).remove(obj);
-            gridMap.get(cellXNew).get(cellYNew).add(obj);
+            obj.positionX = nx;
+            obj.positionY = ny;
+        }
 
-            // if it was our local player, delete old objects in out-of-range cells
-            if (obj == localPlayer)
+        synchronized (gridMapLock)
+        {
+            // if player moved between cells, relocate
+            if (cellX != cellXNew || cellY != cellYNew || !gridMap.get(cellX).get(cellY).contains(obj))
             {
-                List<Pair<Integer>> nowCells = new LinkedList<Pair<Integer>>();
+                gridMap.get(cellX).get(cellY).remove(obj);
+                gridMap.get(cellXNew).get(cellYNew).add(obj);
 
-                // retrieve currently active cells
-                for (int i = cellXNew - CELL_VISIBLE_COUNT; i <= cellXNew + CELL_VISIBLE_COUNT; i++)
+                // if it was our local player, delete old objects in out-of-range cells
+                if (obj == localPlayer)
                 {
-                    if (i < 0 || i >= mapGridSizeX)
-                        continue;
+                    List<Pair<Integer>> nowCells = new LinkedList<Pair<Integer>>();
 
-                    for (int j = cellYNew - CELL_VISIBLE_COUNT; j <= cellYNew + CELL_VISIBLE_COUNT; j++)
+                    // retrieve currently active cells
+                    for (int i = cellXNew - CELL_VISIBLE_COUNT; i <= cellXNew + CELL_VISIBLE_COUNT; i++)
                     {
-                        if (j < 0 || j >= mapGridSizeY)
+                        if (i < 0 || i >= mapGridSizeX)
                             continue;
 
-                        nowCells.add(new Pair<Integer>(i, j));
-                    }
-                }
+                        for (int j = cellYNew - CELL_VISIBLE_COUNT; j <= cellYNew + CELL_VISIBLE_COUNT; j++)
+                        {
+                            if (j < 0 || j >= mapGridSizeY)
+                                continue;
 
-                // get list of cells to be wiped
-                List<Pair<Integer>> torem = new LinkedList<Pair<Integer>>();
-                for (Pair<Integer> ip : activeCells)
-                {
-                    if (!nowCells.contains(ip))
+                            nowCells.add(new Pair<Integer>(i, j));
+                        }
+                    }
+
+                    // get list of cells to be wiped
+                    List<Pair<Integer>> torem = new LinkedList<Pair<Integer>>();
+                    for (Pair<Integer> ip : activeCells)
                     {
-                        wipeCell(ip.first, ip.second);
-                        torem.add(ip);
+                        if (!nowCells.contains(ip))
+                        {
+                            wipeCell(ip.first, ip.second);
+                            torem.add(ip);
+                        }
+                    }
+
+                    // remove all listed cells
+                    activeCells.removeAll(torem);
+                    torem = null;
+
+                    // activate newly discovered cells
+                    for (Pair<Integer> ip : nowCells)
+                    {
+                        if (!activeCells.contains(ip))
+                            activeCells.add(ip);
                     }
                 }
-
-                // remove all listed cells
-                activeCells.removeAll(torem);
-                torem = null;
-
-                // activate newly discovered cells
-                for (Pair<Integer> ip : nowCells)
+                else
                 {
-                    if (!activeCells.contains(ip))
-                        activeCells.add(ip);
-                }
-            }
-            else
-            {
-                int iX = getCellIndex(obj.positionX);
-                int iY = getCellIndex(obj.positionY);
+                    int iX = getCellIndex(obj.positionX);
+                    int iY = getCellIndex(obj.positionY);
 
-                // remove out of range players
-                if (!activeCells.contains(new Pair<Integer>(iX, iY)))
-                {
-                    System.out.println("Removing player from "+iX+", "+iY);
-                    removePlayerObject(obj);
+                    // remove out of range players
+                    if (!activeCells.contains(new Pair<Integer>(iX, iY)))
+                    {
+                        System.out.println("Removing player from "+iX+", "+iY);
+                        removePlayerObject(obj);
+                    }
                 }
             }
         }
@@ -310,44 +350,47 @@ public class GameStorage
         WorldObject closest = null;
         float closestManhattan = 120000.0f, currDist;
 
-        // go through +1 and -1 sorrounding of our cell
-        for (int i = cellX - 1; i <= cellX + 1; i++)
+        synchronized (gridMapLock)
         {
-            // do not allow to go past borders
-            if (i < 0)
-                continue;
-            if (i >= mapGridSizeX)
-                continue;
-
-            // ..sorroundings in another direction
-            for (int j = cellY - 1; j <= cellY + 1; j++)
+            // go through +1 and -1 sorrounding of our cell
+            for (int i = cellX - 1; i <= cellX + 1; i++)
             {
-                if (j < 0)
+                // do not allow to go past borders
+                if (i < 0)
                     continue;
-                if (j >= mapGridSizeY)
+                if (i >= mapGridSizeX)
                     continue;
 
-                // get list reference
-                List<WorldObject> wobjlist = gridMap.get(i).get(j);
-
-                // check for all objects
-                for (WorldObject ob : wobjlist)
+                // ..sorroundings in another direction
+                for (int j = cellY - 1; j <= cellY + 1; j++)
                 {
-                    // exclude local player, or already locally consumed objects
-                    if (ob == localPlayer || ob.localIntersect)
+                    if (j < 0)
+                        continue;
+                    if (j >= mapGridSizeY)
                         continue;
 
-                    // if the target is player, count his size and use exact distance
-                    if (ob instanceof PlayerObject)
-                        currDist = getExactDistance(ob, localPlayer) - ((float)((PlayerObject) ob).size)*GameCanvas.PLAYER_SIZE_COEF / GameCanvas.DRAW_UNIT_COEF;
-                    else // otherwise use manhattan distance as relevant quick metric
-                        currDist = getManhattanDistance(ob, localPlayer);
+                    // get list reference
+                    List<WorldObject> wobjlist = gridMap.get(i).get(j);
 
-                    // if we found closer object, use it
-                    if (currDist < closestManhattan)
+                    // check for all objects
+                    for (WorldObject ob : wobjlist)
                     {
-                        closestManhattan = currDist;
-                        closest = ob;
+                        // exclude local player, or already locally consumed objects
+                        if (ob == localPlayer || ob.localIntersect)
+                            continue;
+
+                        // if the target is player, count his size and use exact distance
+                        if (ob instanceof PlayerObject)
+                            currDist = getExactDistance(ob, localPlayer) - ((float)((PlayerObject) ob).size)*GameCanvas.PLAYER_SIZE_COEF / GameCanvas.DRAW_UNIT_COEF;
+                        else // otherwise use manhattan distance as relevant quick metric
+                            currDist = getManhattanDistance(ob, localPlayer);
+
+                        // if we found closer object, use it
+                        if (currDist < closestManhattan)
+                        {
+                            closestManhattan = currDist;
+                            closest = ob;
+                        }
                     }
                 }
             }
@@ -400,10 +443,13 @@ public class GameStorage
      */
     public PlayerObject findPlayer(int id)
     {
-        for (PlayerObject pl : playerObjects)
+        synchronized (playerObjectLock)
         {
-            if (pl.id == id)
-                return pl;
+            for (PlayerObject pl : playerObjects)
+            {
+                if (pl.id == id)
+                    return pl;
+            }
         }
         return null;
     }
@@ -415,10 +461,13 @@ public class GameStorage
      */
     public WorldObject findObject(int id)
     {
-        for (WorldObject ob : worldObjects)
+        synchronized (worldObjectLock)
         {
-            if (ob.id == id)
-                return ob;
+            for (WorldObject ob : worldObjects)
+            {
+                if (ob.id == id)
+                    return ob;
+            }
         }
         return null;
     }
@@ -458,14 +507,19 @@ public class GameStorage
      */
     public void setPlayerSize(PlayerObject pl, int size)
     {
-        pl.size = size;
+        synchronized (playerObjectLock)
+        {
+            pl.size = size;
 
-        if (size <= 120)
-            pl.moveCoef = MOVE_MS_COEF_MAX;
-        else if (size >= 1200)
-            pl.moveCoef = MOVE_MS_COEF_MIN;
-        else
-            pl.moveCoef = -(size - 540)*(MOVE_MS_COEF_MIN / 420) + ((MOVE_MS_COEF_MAX + MOVE_MS_COEF_MIN) / 2.0f);
+            if (size <= 12) // 120
+                pl.moveCoef = MOVE_MS_COEF_MAX;
+            else if (size >= 500)
+                pl.moveCoef = MOVE_MS_COEF_MIN;
+            else
+                pl.moveCoef = MOVE_MS_COEF_MAX - ((size - 12.0f)/(500.0f-12.0f))*(MOVE_MS_COEF_MAX - MOVE_MS_COEF_MIN);
+
+            System.out.println("Speed: "+pl.moveCoef);
+        }
     }
 
     /**
@@ -473,9 +527,18 @@ public class GameStorage
      */
     public synchronized void wipeAll()
     {
-        worldObjects.clear();
-        playerObjects.clear();
-        gridMap.clear();
+        synchronized (worldObjectLock)
+        {
+            worldObjects.clear();
+        }
+        synchronized (playerObjectLock)
+        {
+            playerObjects.clear();
+        }
+        synchronized (gridMapLock)
+        {
+            gridMap.clear();
+        }
     }
 
 }
