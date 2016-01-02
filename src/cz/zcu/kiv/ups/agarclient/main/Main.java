@@ -19,7 +19,7 @@ public class Main
     private static String sessionKey = null;
 
     /** Client network latency */
-    private static int clientLatency = -1;
+    private static int clientLatency = 0;
 
     /**
      * Main application method

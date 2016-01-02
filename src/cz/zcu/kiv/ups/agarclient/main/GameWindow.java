@@ -399,6 +399,20 @@ public class GameWindow extends JFrame implements NetworkStateReceiver
                 }
             }
         }
+        // player exit packet
+        else if (packet.getOpcode() == Opcodes.SP_PLAYER_EXIT.val())
+        {
+            int playerId = packet.getInt();
+            byte reason = packet.getByte();
+
+            PlayerObject obj = GameStorage.getInstance().findPlayer(playerId);
+            if (obj != null)
+            {
+                GameStorage.getInstance().removePlayerObject(obj);
+                // TODO: chat message about player leave
+            }
+        }
+        // session restore response packet
         else if (packet.getOpcode() == Opcodes.SP_RESTORE_SESSION_RESPONSE.val())
         {
             int statusCode = packet.getByte();

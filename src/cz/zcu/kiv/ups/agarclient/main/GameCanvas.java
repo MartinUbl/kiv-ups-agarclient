@@ -331,7 +331,7 @@ public strictfp class GameCanvas extends JPanel implements ActionListener
         float refY = pl.positionY - (getHeight() / 2) / DRAW_UNIT_COEF;
 
         g2.setColor(Color.BLACK);
-        g2.drawString(Math.round(pl.positionX*100.0f)/100.0f+" ; "+Math.round(pl.positionY*100.0f)/100.0f, 5, 15);
+        g2.drawString(Math.round(pl.positionX*100.0f)/100.0f+" ; "+Math.round(pl.positionY*100.0f)/100.0f+" ; "+Main.getClientLatency()+"ms", 5, 15);
 
         // retrieve everything we need to be drawn
         synchronized (GameStorage.worldObjectLock)
