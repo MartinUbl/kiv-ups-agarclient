@@ -228,6 +228,20 @@ public strictfp class GameCanvas extends JPanel implements ActionListener
 
             @Override
             public void keyPressed(KeyEvent e) {
+
+                // leave game on escape key press
+                if (e.getKeyCode() == KeyEvent.VK_ESCAPE)
+                {
+                    timer.stop();
+
+                    GamePacket leavepkt = new GamePacket(Opcodes.CP_PLAYER_EXIT.val());
+                    Networking.getInstance().sendPacket(leavepkt);
+
+                    parentFrame.returnToLobby();
+
+                    return;
+                }
+
                 if (e.getKeyCode() == KeyEvent.VK_W)
                     moveDirFlags[0] = true;
                 else if (e.getKeyCode() == KeyEvent.VK_A)

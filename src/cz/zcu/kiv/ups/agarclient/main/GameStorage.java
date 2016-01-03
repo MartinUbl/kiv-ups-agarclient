@@ -215,6 +215,11 @@ public class GameStorage
     private void wipeCell(int indexX, int indexY)
     {
         List<WorldObject> wobl = gridMap.get(indexX).get(indexY);
+
+        // no cell at this coords
+        if (wobl == null)
+            return;
+
         // remove all world objects and players from that cell
         synchronized (worldObjectLock)
         {
@@ -538,6 +543,7 @@ public class GameStorage
         synchronized (gridMapLock)
         {
             gridMap.clear();
+            activeCells.clear();
         }
     }
 

@@ -164,7 +164,7 @@ public class LobbyWindow extends JFrame implements NetworkStateReceiver, ActionL
      */
     private void switchToGame()
     {
-        GameWindow gw = new GameWindow();
+        GameWindow gw = new GameWindow(this);
         gw.initComponents();
         Networking.getInstance().registerStateReceiver(gw);
         setVisible(false);

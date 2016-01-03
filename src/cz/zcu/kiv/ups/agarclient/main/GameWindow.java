@@ -27,6 +27,18 @@ public class GameWindow extends JFrame implements NetworkStateReceiver
     /** Flag for game init */
     private boolean gameInitialized = false;
 
+    /** parent lobby window we will return to after leaving room */
+    private LobbyWindow parentWindow = null;
+
+    /**
+     * Public constructor - retaining parent window
+     * @param parent
+     */
+    public GameWindow(LobbyWindow parent)
+    {
+        parentWindow = parent;
+    }
+
     /**
      * Initializes layout and default stuff
      */
@@ -47,6 +59,22 @@ public class GameWindow extends JFrame implements NetworkStateReceiver
 
         // do not allow resizing
         setResizable(false);
+    }
+
+    public void returnToLobby()
+    {
+        setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
+
+        Networking.getInstance().registerStateReceiver(parentWindow);
+
+        GameStorage.getInstance().wipeAll();
+        GameStorage.getInstance().setLocalPlayer(null);
+
+        parentWindow.setVisible(true);
+        parentWindow.initRoomList();
+
+        setVisible(false);
+        dispose();
     }
 
     /**
