@@ -27,6 +27,10 @@ public class Main
      */
     public static void main(String[] args)
     {
+        // this is due to possibility of using socket retarder (works only on IPv4 stack implementation)
+        // https://github.com/dsiroky/socket_retarder
+        System.setProperty("java.net.preferIPv4Stack", "true");
+
         // start with login window
         LoginWindow lw = new LoginWindow();
         lw.initComponents();

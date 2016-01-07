@@ -215,6 +215,7 @@ public class LobbyWindow extends JFrame implements NetworkStateReceiver, ActionL
                     JOptionPane.showMessageDialog(null, "Tato místnost nepřijímá spektátory!", "Nelze se připojit", JOptionPane.ERROR_MESSAGE);
                     break;
                 case 3: // no such room (should not happen)
+                    JOptionPane.showMessageDialog(null, "Tato místnost již byla ukončena!", "Nelze se připojit", JOptionPane.ERROR_MESSAGE);
                     break;
                 case 4: // already in room (should not happen)
                     break;
