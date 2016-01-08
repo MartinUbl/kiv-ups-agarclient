@@ -257,6 +257,9 @@ public class GameStorage
 
         synchronized (gridMapLock)
         {
+            if (gridMap == null || gridMap.get(cellX) == null || gridMap.get(cellX).get(cellY) == null)
+                return;
+
             // if player moved between cells, relocate
             if (cellX != cellXNew || cellY != cellYNew || !gridMap.get(cellX).get(cellY).contains(obj))
             {
@@ -357,6 +360,9 @@ public class GameStorage
 
         synchronized (gridMapLock)
         {
+            if (gridMap == null)
+                return null;
+
             // go through +1 and -1 sorrounding of our cell
             for (int i = cellX - 1; i <= cellX + 1; i++)
             {
@@ -365,6 +371,8 @@ public class GameStorage
                     continue;
                 if (i >= mapGridSizeX)
                     continue;
+                if (gridMap.get(i) == null)
+                    continue;
 
                 // ..sorroundings in another direction
                 for (int j = cellY - 1; j <= cellY + 1; j++)
@@ -372,6 +380,9 @@ public class GameStorage
                     if (j < 0)
                         continue;
                     if (j >= mapGridSizeY)
+                        continue;
+
+                    if (gridMap.get(i).get(j) == null)
                         continue;
 
                     // get list reference

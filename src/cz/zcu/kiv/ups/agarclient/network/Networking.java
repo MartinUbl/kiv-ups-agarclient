@@ -23,6 +23,9 @@ public class Networking extends Thread
     /** socket i/o timeout in milliseconds */
     private static final int SOCKET_IO_TIMEOUT = 5000;
 
+    /** packet limit without response */
+    private static final int SOCKET_NORESPONSE_PKT_LIMIT = 30;
+
     /** Only one networking class instance (singleton) */
     private static Networking INSTANCE = null;
 
@@ -41,6 +44,9 @@ public class Networking extends Thread
 
     /** flag for socket shutdown */
     private boolean isShuttingDown = false;
+
+    /** number of packets without response */
+    private int noresponsePacketCount = 0;
 
     /** State of our connection to server */
     private ConnectionState connectionState = ConnectionState.IDLE;
@@ -81,6 +87,22 @@ public class Networking extends Thread
     {
         host = server_host;
         port = server_port;
+    }
+
+    /**
+     * Increases noresponse packet count
+     */
+    private void increaseNoresponsePackets()
+    {
+        noresponsePacketCount++;
+    }
+
+    /**
+     * Clears noresponse packet count
+     */
+    private void clearNoresponsePackets()
+    {
+        noresponsePacketCount = 0;
     }
 
     /**
@@ -153,12 +175,22 @@ public class Networking extends Thread
      */
     private void _sendPacket(GamePacket msg)
     {
+        increaseNoresponsePackets();
+
         try
         {
             System.out.println("Sending: "+msg.getOpcode());
             // write raw data and flush to be sent
             ostream.write(msg.getRaw());
             ostream.flush();
+
+            if (noresponsePacketCount > SOCKET_NORESPONSE_PKT_LIMIT)
+            {
+                System.out.println("Limit of non-responded packets reached, closing");
+                s.close();
+                isConnected = false;
+                _sendConnectionStateChange(ConnectionState.DISCONNECTED_RETRY);
+            }
         }
         catch (Exception e)
         {
@@ -166,6 +198,8 @@ public class Networking extends Thread
 
             isConnected = false;
             _sendConnectionStateChange(ConnectionState.DISCONNECTED_RETRY);
+
+            return;
         }
     }
 
@@ -239,6 +273,8 @@ public class Networking extends Thread
             data = new byte[size];
             istream.read(data, 0, size);
 
+            clearNoresponsePackets();
+
             // build packet and return it
             return new GamePacket((short)opcode, (short)size, data);
         }
@@ -297,6 +333,8 @@ public class Networking extends Thread
      */
     private synchronized void _sendConnectionStateChange(ConnectionState state)
     {
+        clearNoresponsePackets();
+
         if (!genericReceiver.OnConnectionStateChanged(state) && stateReceiver != null)
             stateReceiver.OnConnectionStateChanged(state);
 
