@@ -50,7 +50,9 @@ public enum Opcodes
     SP_PING_PONG(0x28),
     CP_RESTORE_SESSION(0x29),
     SP_RESTORE_SESSION_RESPONSE(0x2A),
-    SP_KICK(0x2B);
+    SP_KICK(0x2B),
+
+    OPCODE_MAX(0x2B);
 
     /** opcode value */
     private int opcode;

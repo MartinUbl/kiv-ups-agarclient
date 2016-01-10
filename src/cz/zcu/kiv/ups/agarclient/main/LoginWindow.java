@@ -141,6 +141,9 @@ public class LoginWindow extends JFrame implements NetworkStateReceiver
         loginButton.addMouseListener(new MouseAdapter() {
             public void mouseClicked(MouseEvent e)
             {
+                if (!loginButton.isEnabled())
+                    return;
+
                 // clear errors, disable buttons and startup networking
                 resultText.setText("");
                 setButtonsEnabled(false);
@@ -166,6 +169,9 @@ public class LoginWindow extends JFrame implements NetworkStateReceiver
         registerButton.addMouseListener(new MouseAdapter() {
             public void mouseClicked(MouseEvent e)
             {
+                if (!registerButton.isEnabled())
+                    return;
+
                 // clear errors, disable buttons, startup networking
                 resultText.setText("");
                 setButtonsEnabled(false);
@@ -331,6 +337,11 @@ public class LoginWindow extends JFrame implements NetworkStateReceiver
         if (state == ConnectionState.CONNECTION_FAILED)
         {
             JOptionPane.showMessageDialog(null, "Spojení se serverem nemohlo být navázáno!", "Nelze se připojit", JOptionPane.ERROR_MESSAGE);
+            setButtonsEnabled(true);
+        }
+        else if (state == ConnectionState.CONNECTION_FAILED_SERVER_BAD)
+        {
+            JOptionPane.showMessageDialog(null, "Spojení se serverem bylo navázáno, ale pravděpodobně se nejedná o herní server pro tuto hru!", "Nelze se připojit", JOptionPane.ERROR_MESSAGE);
             setButtonsEnabled(true);
         }
 

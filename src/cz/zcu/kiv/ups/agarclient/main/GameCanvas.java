@@ -408,7 +408,7 @@ public strictfp class GameCanvas extends JPanel implements ActionListener
         int diff = (int)(System.currentTimeMillis() - lastUpdateTime);
 
         // if our player is moving, update movement
-        if (pl.moving)
+        if (pl != null && pl.moving)
         {
             float nx, ny;
 

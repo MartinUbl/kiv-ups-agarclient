@@ -101,6 +101,9 @@ public class LobbyWindow extends JFrame implements NetworkStateReceiver, ActionL
         createButton.addMouseListener(new MouseAdapter() {
             public void mouseClicked(MouseEvent e)
             {
+                if (!createButton.isEnabled())
+                    return;
+
                 NewRoomDialog nrd = new NewRoomDialog(parent);
                 nrd.initComponents();
                 nrd.setVisible(true);
@@ -112,6 +115,9 @@ public class LobbyWindow extends JFrame implements NetworkStateReceiver, ActionL
         joinButton.addMouseListener(new MouseAdapter() {
             public void mouseClicked(MouseEvent e)
             {
+                if (!joinButton.isEnabled())
+                    return;
+
                 RoomListItem rli = roomList.getSelectedValue();
                 if (rli == null)
                 {
@@ -247,9 +253,8 @@ public class LobbyWindow extends JFrame implements NetworkStateReceiver, ActionL
             int statusCode = packet.getByte();
             if (statusCode != 0)
             {
-                Networking.getInstance().disconnect();
-
                 JOptionPane.showMessageDialog(null, "Přihlášení vypršelo, prosím, přihlašte se znovu!", "Nelze obnovit spojení", JOptionPane.ERROR_MESSAGE);
+                Networking.getInstance().disconnect();
             }
             else
             {

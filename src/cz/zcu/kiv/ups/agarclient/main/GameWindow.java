@@ -52,7 +52,16 @@ public class GameWindow extends JFrame implements NetworkStateReceiver
         setLayout(new BorderLayout());
 
         // for now, we will exit when closing this frame
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
+
+        final GameWindow that = this;
+
+        addWindowListener(new java.awt.event.WindowAdapter() {
+            @Override
+            public void windowClosing(java.awt.event.WindowEvent windowEvent) {
+                that.returnToLobby();
+            }
+        });
 
         // center window
         setLocationRelativeTo(null);
@@ -453,9 +462,8 @@ public class GameWindow extends JFrame implements NetworkStateReceiver
             int statusCode = packet.getByte();
             if (statusCode != 0)
             {
-                Networking.getInstance().disconnect();
-
                 JOptionPane.showMessageDialog(null, "Přihlášení vypršelo, prosím, přihlašte se znovu!", "Nelze obnovit spojení", JOptionPane.ERROR_MESSAGE);
+                Networking.getInstance().disconnect();
             }
             else
             {

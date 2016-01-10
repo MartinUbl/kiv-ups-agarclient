@@ -275,6 +275,16 @@ public class Networking extends Thread
 
             clearNoresponsePackets();
 
+            System.out.println("Receiving packet "+opcode);
+
+            if (opcode < Opcodes.OPCODE_NONE.val() || opcode > Opcodes.OPCODE_MAX.val())
+            {
+                isConnected = false;
+                s.close();
+                _sendConnectionStateChange(ConnectionState.CONNECTION_FAILED_SERVER_BAD);
+                return null;
+            }
+
             // build packet and return it
             return new GamePacket((short)opcode, (short)size, data);
         }
@@ -469,7 +479,7 @@ public class Networking extends Thread
             }
 
             // if we were disconnected by external signal (i.e. kicked by server), wait for another user-supplied signal
-            if (!isShuttingDown && !isConnected && connectionState == ConnectionState.DISCONNECTED)
+            if (!isShuttingDown && !isConnected && (connectionState == ConnectionState.DISCONNECTED || connectionState == ConnectionState.CONNECTION_FAILED_SERVER_BAD))
             {
                 try
                 {
