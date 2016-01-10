@@ -386,6 +386,17 @@ public class Networking extends Thread
         }
     }
 
+    public void simulateSessionTimeout()
+    {
+        try {
+            s.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        isConnected = false;
+        _sendConnectionStateChange(ConnectionState.DISCONNECTED_RETRY);
+    }
+
     private void sendRestoreSession()
     {
         GamePacket gp = new GamePacket(Opcodes.CP_RESTORE_SESSION.val());

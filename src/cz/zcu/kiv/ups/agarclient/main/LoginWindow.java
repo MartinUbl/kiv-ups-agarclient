@@ -221,22 +221,50 @@ public class LoginWindow extends JFrame implements NetworkStateReceiver
         if (packet.getOpcode() == Opcodes.SP_LOGIN_RESPONSE.val())
         {
             int rescode = packet.getByte();
+            int plid;
+            String sessKey;
 
             switch (rescode)
             {
                 case 0: // OK
 
                     // retrieve player ID and store it
-                    int plid = packet.getInt();
+                    plid = packet.getInt();
                     Main.setPlayerId(plid);
 
-                    String sessKey = packet.getString();
+                    sessKey = packet.getString();
                     Main.setSessionKey(sessKey);
                     System.out.println("Session key: "+sessKey);
 
                     setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
                     goToLobby();
                     return true;
+                case 4: // OK, but server suggested session restore
+                    // at this time, player is already in some room
+                    // we will just send session restore request
+                    plid = packet.getInt();
+                    Main.setPlayerId(plid);
+
+                    sessKey = packet.getString();
+                    Main.setSessionKey(sessKey);
+                    System.out.println("Session key: "+sessKey);
+
+                    // create game window and pass everything
+
+                    LobbyWindow lw = new LobbyWindow();
+                    lw.initComponents();
+                    lw.setVisible(false);
+
+                    GameWindow gw = new GameWindow(lw);
+                    gw.initComponents();
+                    Networking.getInstance().registerStateReceiver(gw);
+
+                    setVisible(false);
+                    gw.setVisible(true);
+
+                    Networking.getInstance().simulateSessionTimeout();
+
+                    break;
                 case 1: // invalid name
                     resultText.setText("Neexistující uživatel!");
                     break;

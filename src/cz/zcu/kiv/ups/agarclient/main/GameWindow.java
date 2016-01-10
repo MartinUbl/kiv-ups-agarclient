@@ -470,12 +470,14 @@ public class GameWindow extends JFrame implements NetworkStateReceiver
     {
         if (state == ConnectionState.DISCONNECTED_RETRY)
         {
-            canvas.setConnectionLostState(1);
+            if (canvas != null)
+                canvas.setConnectionLostState(1);
             GameStorage.getInstance().wipeAll();
         }
         else if (state == ConnectionState.CONNECTED)
         {
-            canvas.setConnectionLostState(2);
+            if (canvas != null)
+                canvas.setConnectionLostState(2);
         }
         else if (state == ConnectionState.DISCONNECTED)
         {
