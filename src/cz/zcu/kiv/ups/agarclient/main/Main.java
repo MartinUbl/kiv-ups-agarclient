@@ -20,6 +20,8 @@ public class Main
 
     /** Client network latency */
     private static int clientLatency = 0;
+    /** Player count */
+    private static int playerCount = 0;
 
     /**
      * Main application method
@@ -76,6 +78,24 @@ public class Main
     }
 
     /**
+     * Retrieves player count
+     * @return player count
+     */
+    public static int getPlayerCount()
+    {
+        return playerCount;
+    }
+
+    /**
+     * Sets player count
+     * @param cnt count
+     */
+    public static void setPlayerCount(int cnt)
+    {
+        playerCount = cnt;
+    }
+
+    /**
      * Retrieves session key
      * @return session key
      */
@@ -109,5 +129,23 @@ public class Main
     public static void setPlayerName(String str)
     {
         playerName = str;
+    }
+
+    /**
+     * Returns string mutation based on count
+     * @param count count
+     * @param single single form
+     * @param dbl plural form
+     * @param more more form
+     * @return correct mutation
+     */
+    public static String getCountBasedString(int count, String single, String dbl, String more)
+    {
+        if (count == 1)
+            return single;
+        else if (count >= 2 && count <= 4)
+            return dbl;
+        else
+            return more;
     }
 }

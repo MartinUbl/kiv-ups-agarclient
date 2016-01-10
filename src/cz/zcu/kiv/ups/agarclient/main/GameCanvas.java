@@ -344,9 +344,6 @@ public strictfp class GameCanvas extends JPanel implements ActionListener
         float refX = pl.positionX - (getWidth() / 2) / DRAW_UNIT_COEF;
         float refY = pl.positionY - (getHeight() / 2) / DRAW_UNIT_COEF;
 
-        g2.setColor(Color.BLACK);
-        g2.drawString(Math.round(pl.positionX*100.0f)/100.0f+" ; "+Math.round(pl.positionY*100.0f)/100.0f+" ; "+Main.getClientLatency()+"ms", 5, 15);
-
         // retrieve everything we need to be drawn
         synchronized (GameStorage.worldObjectLock)
         {
@@ -389,6 +386,14 @@ public strictfp class GameCanvas extends JPanel implements ActionListener
         g2.setColor(new Color(pl.param));
         g2.fillOval((getWidth() - plsize) / 2, (getHeight() - plsize) / 2, plsize, plsize);
         g2.drawString(pl.name, (getWidth() - g2.getFontMetrics().stringWidth(pl.name)) / 2, (getHeight() - plsize) / 2 - 4);
+
+        // draw UI
+
+        g2.setColor(Color.BLACK);
+        g2.drawString(Math.round(pl.positionX*100.0f)/100.0f+" ; "+Math.round(pl.positionY*100.0f)/100.0f+" ; "+Main.getClientLatency()+"ms", 5, 15);
+
+        String toDraw = Main.getPlayerCount() + " " + Main.getCountBasedString(Main.getPlayerCount(), "hráč", "hráči", "hráčů");
+        g2.drawString(toDraw, getWidth() - g2.getFontMetrics().stringWidth(toDraw) - 10, 15);
     }
 
     /**

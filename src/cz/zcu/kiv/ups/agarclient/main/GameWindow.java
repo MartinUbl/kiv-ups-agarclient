@@ -205,6 +205,13 @@ public class GameWindow extends JFrame implements NetworkStateReceiver
             canvas.setConnectionLostState(0);
 
             gameInitialized = true;
+
+            // request stats
+            if (packet.getOpcode() == Opcodes.SP_NEW_WORLD.val())
+            {
+                GamePacket statsrq = new GamePacket(Opcodes.CP_STATS.val());
+                Networking.getInstance().sendPacket(statsrq);
+            }
         }
         // move heartbeat packet
         else if (packet.getOpcode() == Opcodes.SP_MOVE_HEARTBEAT.val())
@@ -459,6 +466,22 @@ public class GameWindow extends JFrame implements NetworkStateReceiver
                 }
 
                 initGame(true);
+            }
+        }
+        // statistics
+        else if (packet.getOpcode() == Opcodes.SP_STATS_RESPONSE.val())
+        {
+            int plCount = packet.getInt();
+
+            Main.setPlayerCount(plCount);
+
+            for (int i = 0; i < plCount; i++)
+            {
+                // NYI
+
+                packet.getString(); // name
+                packet.getInt();    // size (score)
+                packet.getInt();    // latency
             }
         }
 
