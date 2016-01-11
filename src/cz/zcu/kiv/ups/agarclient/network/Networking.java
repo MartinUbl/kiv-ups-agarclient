@@ -213,6 +213,9 @@ public class Networking extends Thread
             _sendPacket(msg);
         else
         {
+			if (msg.getOpcode() > 0x07 && msg.getOpcode() < 0x25)
+				return;
+
             synchronized (this)
             {
                 sendQueue.add(msg);
