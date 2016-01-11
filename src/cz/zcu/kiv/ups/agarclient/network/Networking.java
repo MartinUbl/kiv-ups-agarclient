@@ -411,6 +411,7 @@ public class Networking extends Thread
     {
         GamePacket gp = new GamePacket(Opcodes.CP_RESTORE_SESSION.val());
         gp.putString(Main.getSessionKey());
+		gp.putInt(Main.getPlayerId());
         sendPacket(gp);
     }
 
